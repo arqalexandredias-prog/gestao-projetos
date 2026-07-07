@@ -173,20 +173,16 @@ function getStatusClass(status) {
   return map[status] || "padrao";
 }
 
-function BrandLogo({ compact = false, dashboard = false }) {
-  const width = dashboard ? "320px" : compact ? "180px" : "150px";
-
+function BrandLogo() {
   return (
     <img
       src={LOGO_SRC}
       alt="Alexandre Dias | Interiores - Gestão de Projetos"
-      className={`brand-logo ${compact ? "brand-logo-compact" : ""} ${
-        dashboard ? "brand-logo-dashboard" : ""
-      }`}
+      className="brand-logo"
       style={{
         display: "block",
-        width,
-        maxWidth: "100%",
+        width: "150px",
+        maxWidth: "150px",
         height: "auto",
         objectFit: "contain",
       }}
@@ -1024,7 +1020,8 @@ export default function App() {
       <section className="content">
         <header className="topbar">
           <div className="topbar-brand">
-            <BrandLogo compact />
+            <strong>Alexandre Dias | Interiores</strong>
+            <span>Gestão de Projetos</span>
           </div>
 
           <div className="topbar-actions">
@@ -1067,13 +1064,9 @@ export default function App() {
         {activePage === "resumo" ? (
           <section className="page-section">
             <section className="hero welcome-card">
-              <div className="dashboard-logo-wrap">
-                <BrandLogo dashboard />
-
-                <h1>
-                  Vamos criar algo incrível, <span>Alexandre?</span>
-                </h1>
-              </div>
+              <h1>
+                Vamos criar algo incrível, <span>Alexandre?</span>
+              </h1>
             </section>
 
             <section className="summary-grid">
