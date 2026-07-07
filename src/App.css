@@ -2306,4 +2306,53 @@ td {
   .calendar-detail-actions button.danger {
     grid-column: auto !important;
   }
+}/* Calendário mobile: controles em uma linha e novo projeto discreto no cabeçalho */
+@media (max-width: 620px) {
+  .calendar-page-header {
+    position: relative !important;
+    padding-top: 4px !important;
+  }
+
+  .calendar-page-header h1 {
+    padding-right: 116px !important;
+    font-size: 1.75rem !important;
+  }
+
+  .calendar-page-actions {
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    width: 100% !important;
+    margin-top: 10px !important;
+  }
+
+  .calendar-page-actions button {
+    flex: 1 1 0 !important;
+    min-width: 0 !important;
+    height: 32px !important;
+    padding: 0 5px !important;
+    border-radius: 999px !important;
+    font-size: 0.55rem !important;
+    line-height: 1 !important;
+    white-space: nowrap !important;
+  }
+
+  .calendar-page-actions .primary-button {
+    position: absolute !important;
+    top: 0 !important;
+    right: 0 !important;
+    flex: none !important;
+    width: auto !important;
+    min-width: 98px !important;
+    height: 30px !important;
+    padding: 0 11px !important;
+    border-radius: 999px !important;
+    font-size: 0.58rem !important;
+    font-weight: 850 !important;
+    box-shadow: 0 8px 18px rgba(43, 31, 26, 0.12) !important;
+  }
+
+  .full-calendar-card {
+    margin-top: 4px !important;
+  }
 }
