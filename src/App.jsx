@@ -142,9 +142,9 @@ function isActiveProject(project) {
   return status !== "Recebido" && status !== "Cancelado";
 }
 
-function emptyProjectForm() {
+function emptyProjectForm(date = todayISO()) {
   return {
-    date: todayISO(),
+    date,
     development: "",
     client: "",
     consultant: "",
@@ -182,8 +182,7 @@ function getStatusClass(status) {
 function LogoMark({ compact = false }) {
   return (
     <div className={`logo-mark ${compact ? "logo-mark-compact" : ""}`} aria-label="AD">
-      <span className="logo-a">A</span>
-      <span className="logo-d">D</span>
+      <strong>AD</strong>
       <i />
     </div>
   );
@@ -203,10 +202,6 @@ function SummaryCard({ icon, label, value, helper, tone = "neutral" }) {
         <strong>{value}</strong>
         {helper ? <small>{helper}</small> : null}
       </div>
-
-      <button type="button" aria-label="Mais opções">
-        ⋯
-      </button>
     </article>
   );
 }
@@ -622,21 +617,28 @@ function ProjectListItem({ project, onEdit }) {
   );
 }
 
-function CalendarModal({
+function FullCalendarPage({
   month,
   setMonth,
   selectedDate,
   setSelectedDate,
   projects,
-  onClose,
   onEdit,
   onDelete,
   onMarkReceived,
+  onNewProject,
 }) {
-  const [year, monthNumber] = month.split("-").map(Number);
+  const monthToUse = month || todayISO().slice(0, 7);
+  const [year, monthNumber] = monthToUse.split("-").map(Number);
   const firstDay = new Date(year, monthNumber - 1, 1);
   const daysInMonth = new Date(year, monthNumber, 0).getDate();
   const startWeekday = firstDay.getDay();
+
+  const projectsByDate = projects.reduce((acc, project) => {
+    if (!acc[project.date]) acc[project.date] = [];
+    acc[project.date].push(project);
+    return acc;
+  }, {});
 
   const cells = [];
 
@@ -649,13 +651,7 @@ function CalendarModal({
     cells.push(date);
   }
 
-  const projectsByDate = projects.reduce((acc, project) => {
-    if (!acc[project.date]) acc[project.date] = [];
-    acc[project.date].push(project);
-    return acc;
-  }, {});
-
-  const selectedDayProjects = selectedDate
+  const selectedProjects = selectedDate
     ? [...(projectsByDate[selectedDate] || [])].sort((a, b) => a.client.localeCompare(b.client))
     : [];
 
@@ -666,101 +662,192 @@ function CalendarModal({
     setSelectedDate(null);
   }
 
-  function goToCurrentMonth() {
-    setMonth(todayISO().slice(0, 7));
-    setSelectedDate(null);
+  function selectToday() {
+    const today = todayISO();
+    setMonth(today.slice(0, 7));
+    setSelectedDate(today);
   }
 
   return (
-    <div className="modal-backdrop">
-      <div className="modal calendar-modal">
-        <div className="modal-header">
-          <div>
-            <p>Calendário de projetos</p>
-            <h2>{formatMonthLabel(month)}</h2>
-          </div>
-
-          <button type="button" className="icon-button" onClick={onClose}>
-            ×
-          </button>
+    <section className="calendar-page">
+      <div className="calendar-page-header">
+        <div>
+          <p>Calendário</p>
+          <h1>{formatMonthLabel(monthToUse)}</h1>
         </div>
 
-        <div className="calendar-toolbar">
+        <div className="calendar-page-actions">
           <button type="button" onClick={() => changeMonth(-1)}>
             ← Mês anterior
           </button>
 
-          <button type="button" onClick={goToCurrentMonth}>
-            Mês atual
+          <button type="button" onClick={selectToday}>
+            Hoje
           </button>
 
           <button type="button" onClick={() => changeMonth(1)}>
             Próximo mês →
           </button>
+
+          <button type="button" className="primary-button" onClick={() => onNewProject(selectedDate || todayISO())}>
+            + Novo projeto
+          </button>
+        </div>
+      </div>
+
+      <div className="calendar-chips">
+        <span>Projetos</span>
+        <span>A receber</span>
+        <span>Parcial</span>
+        <span>Recebido</span>
+        <span>Cancelado</span>
+      </div>
+
+      <div className="full-calendar-layout">
+        <div className="full-calendar-card">
+          <div className="full-calendar-weekdays">
+            <span>Dom</span>
+            <span>Seg</span>
+            <span>Ter</span>
+            <span>Qua</span>
+            <span>Qui</span>
+            <span>Sex</span>
+            <span>Sáb</span>
+          </div>
+
+          <div className="full-calendar-grid">
+            {cells.map((date, index) => {
+              const dayProjects = date ? projectsByDate[date] || [] : [];
+              const isSelected = date && selectedDate === date;
+              const isToday = date === todayISO();
+
+              return (
+                <div
+                  key={`${date || "empty"}-${index}`}
+                  className={`full-calendar-day ${!date ? "is-empty" : ""} ${
+                    isSelected ? "is-selected" : ""
+                  } ${isToday ? "is-today" : ""}`}
+                  onClick={() => date && setSelectedDate(date)}
+                  role="button"
+                  tabIndex={date ? 0 : -1}
+                >
+                  <strong>{date ? Number(date.slice(-2)) : ""}</strong>
+
+                  <div className="calendar-events">
+                    {dayProjects.slice(0, 3).map((project) => {
+                      const status = getDisplayStatus(project);
+
+                      return (
+                        <button
+                          type="button"
+                          key={project.id}
+                          className={`calendar-event calendar-event-${getStatusClass(status)}`}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            onEdit(project);
+                          }}
+                        >
+                          {project.client || project.development || project.project || "Projeto"}
+                        </button>
+                      );
+                    })}
+
+                    {dayProjects.length > 3 ? (
+                      <span className="more-events">+{dayProjects.length - 3} mais</span>
+                    ) : null}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
 
-        <div className="calendar-grid calendar-weekdays">
-          <span>Dom</span>
-          <span>Seg</span>
-          <span>Ter</span>
-          <span>Qua</span>
-          <span>Qui</span>
-          <span>Sex</span>
-          <span>Sáb</span>
-        </div>
-
-        <div className="calendar-grid">
-          {cells.map((date, index) => {
-            const dayProjects = date ? projectsByDate[date] || [] : [];
-            const day = date ? Number(date.slice(-2)) : "";
-            const isSelected = date && selectedDate === date;
-
-            return (
-              <button
-                key={`${date || "empty"}-${index}`}
-                type="button"
-                className={`calendar-day ${!date ? "is-empty" : ""} ${
-                  dayProjects.length ? "has-projects" : ""
-                } ${isSelected ? "is-selected" : ""}`}
-                disabled={!date}
-                onClick={() => setSelectedDate(date)}
-              >
-                <strong>{day}</strong>
-
-                {dayProjects.length ? (
-                  <span>
-                    {dayProjects.length} {dayProjects.length === 1 ? "projeto" : "projetos"}
-                  </span>
-                ) : null}
-              </button>
-            );
-          })}
-        </div>
-
-        {selectedDate ? (
-          <div className="calendar-details">
-            <div className="calendar-details-header">
-              <div>
-                <p>Projetos da data</p>
-                <h3>{formatDate(selectedDate)}</h3>
-              </div>
+        <aside className="calendar-side-panel">
+          <div className="calendar-side-header">
+            <div>
+              <p>Dia selecionado</p>
+              <h2>{selectedDate ? formatDate(selectedDate) : "Selecione uma data"}</h2>
             </div>
 
-            <ProjectTable
-              projects={selectedDayProjects}
-              onEdit={onEdit}
-              onDelete={onDelete}
-              onMarkReceived={onMarkReceived}
-              emptyMessage="Nenhum projeto lançado nessa data."
-            />
+            <button type="button" onClick={() => onNewProject(selectedDate || todayISO())}>
+              + Cadastrar
+            </button>
           </div>
-        ) : (
-          <div className="calendar-hint">
-            Clique em uma data para ver os clientes e projetos registrados naquele dia.
+
+          <div className="calendar-side-content">
+            {selectedDate ? (
+              selectedProjects.length ? (
+                selectedProjects.map((project) => (
+                  <article className="calendar-detail-card" key={project.id}>
+                    <div className="calendar-detail-head">
+                      <div>
+                        <strong>{project.client || "Cliente sem nome"}</strong>
+                        <span>{project.development || "Sem empreendimento"}</span>
+                      </div>
+
+                      <StatusBadge status={getDisplayStatus(project)} />
+                    </div>
+
+                    <dl>
+                      <div>
+                        <dt>Projeto</dt>
+                        <dd>{project.project || "-"}</dd>
+                      </div>
+
+                      <div>
+                        <dt>Consultor</dt>
+                        <dd>{project.consultant || "-"}</dd>
+                      </div>
+
+                      <div>
+                        <dt>Valor</dt>
+                        <dd>{formatCurrency(project.amount)}</dd>
+                      </div>
+
+                      <div>
+                        <dt>Comissão</dt>
+                        <dd>{formatCurrency(getCommission(project))}</dd>
+                      </div>
+
+                      <div>
+                        <dt>Falta receber</dt>
+                        <dd>{formatCurrency(getPendingCommission(project))}</dd>
+                      </div>
+                    </dl>
+
+                    {project.note ? <p className="calendar-note">{project.note}</p> : null}
+
+                    <div className="calendar-detail-actions">
+                      <button type="button" onClick={() => onEdit(project)}>
+                        Editar
+                      </button>
+
+                      {getDisplayStatus(project) !== "Recebido" ? (
+                        <button type="button" onClick={() => onMarkReceived(project.id)}>
+                          Recebido
+                        </button>
+                      ) : null}
+
+                      <button type="button" className="danger" onClick={() => onDelete(project.id)}>
+                        Excluir
+                      </button>
+                    </div>
+                  </article>
+                ))
+              ) : (
+                <div className="soft-empty">
+                  Nenhum projeto nessa data. Clique em “Cadastrar” para lançar um projeto aqui.
+                </div>
+              )
+            ) : (
+              <div className="soft-empty">
+                Clique em um dia do calendário para ver os projetos cadastrados.
+              </div>
+            )}
           </div>
-        )}
+        </aside>
       </div>
-    </div>
+    </section>
   );
 }
 
@@ -776,10 +863,7 @@ export default function App() {
   const [statusFilter, setStatusFilter] = useState("Todos");
   const [search, setSearch] = useState("");
 
-  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
-  const [calendarMonth, setCalendarMonth] = useState(todayISO().slice(0, 7));
-  const [selectedDate, setSelectedDate] = useState(null);
-
+  const [selectedDate, setSelectedDate] = useState(todayISO());
   const [dashboardDate, setDashboardDate] = useState(todayISO());
 
   useEffect(() => {
@@ -857,9 +941,9 @@ export default function App() {
     ? Math.min(Math.round((summary.received / summary.commission) * 100), 100)
     : 0;
 
-  function openNewProject() {
+  function openNewProject(date = todayISO()) {
     setEditingId(null);
-    setForm(emptyProjectForm());
+    setForm(emptyProjectForm(date));
     setIsFormOpen(true);
   }
 
@@ -887,20 +971,8 @@ export default function App() {
     setIsFormOpen(false);
   }
 
-  function handleCalendarMonthChange(nextMonth) {
-    setCalendarMonth(nextMonth);
-    setSelectedMonth(nextMonth);
-  }
-
   function handleDashboardMonthChange(nextMonth) {
     setSelectedMonth(nextMonth);
-  }
-
-  function openCalendar() {
-    const monthToOpen = selectedMonth || todayISO().slice(0, 7);
-    setCalendarMonth(monthToOpen);
-    setSelectedDate(null);
-    setIsCalendarOpen(true);
   }
 
   function saveProject(event) {
@@ -961,6 +1033,9 @@ export default function App() {
       setProjects((current) => [payload, ...current]);
     }
 
+    setSelectedDate(payload.date);
+    setDashboardDate(payload.date);
+    setSelectedMonth(payload.date.slice(0, 7));
     closeForm();
   }
 
@@ -1018,7 +1093,11 @@ export default function App() {
             Projetos
           </button>
 
-          <button type="button" onClick={openCalendar}>
+          <button
+            type="button"
+            className={activePage === "calendario" ? "active" : ""}
+            onClick={() => setActivePage("calendario")}
+          >
             <span>◷</span>
             Calendário
           </button>
@@ -1043,9 +1122,15 @@ export default function App() {
             </div>
           </div>
 
-          <button type="button" className="ghost-button" onClick={openCalendar}>
-            Calendário
-          </button>
+          <div className="topbar-actions">
+            <button type="button" className="primary-button topbar-primary" onClick={() => openNewProject()}>
+              + Novo projeto
+            </button>
+
+            <button type="button" className="ghost-button" onClick={() => setActivePage("calendario")}>
+              Calendário
+            </button>
+          </div>
         </header>
 
         <div className="mobile-tabs">
@@ -1064,20 +1149,22 @@ export default function App() {
           >
             Projetos
           </button>
+
+          <button
+            type="button"
+            className={activePage === "calendario" ? "active" : ""}
+            onClick={() => setActivePage("calendario")}
+          >
+            Calendário
+          </button>
         </div>
 
         {activePage === "resumo" ? (
           <section className="page-section">
-            <section className="hero">
-              <div>
-                <h1>
-                  Vamos criar algo incrível, <span>Alexandre?</span>
-                </h1>
-              </div>
-
-              <button type="button" className="primary-button" onClick={openNewProject}>
-                + Novo projeto
-              </button>
+            <section className="hero welcome-card">
+              <h1>
+                Vamos criar algo incrível, <span>Alexandre?</span>
+              </h1>
             </section>
 
             <section className="summary-grid">
@@ -1120,7 +1207,7 @@ export default function App() {
                     <h2>Projetos do mês</h2>
                   </div>
 
-                  <button type="button" onClick={openCalendar}>
+                  <button type="button" onClick={() => setActivePage("calendario")}>
                     Ver calendário
                   </button>
                 </div>
@@ -1267,7 +1354,7 @@ export default function App() {
                 <small>Lista compacta para acompanhar clientes, comissões e recebimentos.</small>
               </div>
 
-              <button type="button" className="primary-button" onClick={openNewProject}>
+              <button type="button" className="primary-button" onClick={() => openNewProject()}>
                 + Novo projeto
               </button>
             </section>
@@ -1280,7 +1367,7 @@ export default function App() {
                 onChange={(event) => setSearch(event.target.value)}
               />
 
-              <button type="button" className="calendar-open-button" onClick={openCalendar}>
+              <button type="button" className="calendar-open-button" onClick={() => setActivePage("calendario")}>
                 <span>📅</span>
                 {formatMonthLabel(selectedMonth)}
               </button>
@@ -1309,6 +1396,20 @@ export default function App() {
             />
           </section>
         ) : null}
+
+        {activePage === "calendario" ? (
+          <FullCalendarPage
+            month={currentMonthForUi}
+            setMonth={setSelectedMonth}
+            selectedDate={selectedDate}
+            setSelectedDate={setSelectedDate}
+            projects={projects}
+            onEdit={openEditProject}
+            onDelete={deleteProject}
+            onMarkReceived={markAsReceived}
+            onNewProject={openNewProject}
+          />
+        ) : null}
       </section>
 
       {isFormOpen ? (
@@ -1318,23 +1419,6 @@ export default function App() {
           editingId={editingId}
           onClose={closeForm}
           onSubmit={saveProject}
-        />
-      ) : null}
-
-      {isCalendarOpen ? (
-        <CalendarModal
-          month={calendarMonth}
-          setMonth={handleCalendarMonthChange}
-          selectedDate={selectedDate}
-          setSelectedDate={setSelectedDate}
-          projects={projects}
-          onClose={() => setIsCalendarOpen(false)}
-          onEdit={(project) => {
-            setIsCalendarOpen(false);
-            openEditProject(project);
-          }}
-          onDelete={deleteProject}
-          onMarkReceived={markAsReceived}
         />
       ) : null}
     </main>
