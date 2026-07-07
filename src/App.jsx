@@ -942,7 +942,6 @@ export default function App() {
           <section className="page-section">
             <div className="section-header">
               <div>
-                <p>Lista compacta</p>
                 <h1>Projetos</h1>
               </div>
             </div>
@@ -951,7 +950,7 @@ export default function App() {
               <input
                 type="search"
                 value={search}
-                placeholder="Buscar por data, empreendimento, cliente, consultor, projeto ou observação..."
+                placeholder="Buscar por data, empreendimento, cliente, consultor ou projeto..."
                 onChange={(event) => setSearch(event.target.value)}
               />
 
