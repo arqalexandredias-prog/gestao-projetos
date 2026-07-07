@@ -2007,4 +2007,123 @@ td {
     border-radius: 999px;
     font-size: 0.76rem;
   }
+}/* Card do dia selecionado mais compacto no mobile */
+@media (max-width: 620px) {
+  .calendar-side-panel {
+    margin-top: 12px;
+    border-radius: 22px;
+    background: rgba(255, 252, 248, 0.58);
+  }
+
+  .calendar-side-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 16px 18px;
+    border-bottom: 1px solid rgba(78, 55, 42, 0.06);
+  }
+
+  .calendar-side-header p {
+    margin: 0 0 4px;
+    font-size: 0.62rem;
+    letter-spacing: 0.16em;
+  }
+
+  .calendar-side-header h2 {
+    margin: 0;
+    font-family: inherit;
+    font-size: 1.15rem;
+    font-weight: 850;
+    letter-spacing: -0.03em;
+  }
+
+  .calendar-side-header button {
+    width: auto;
+    min-width: 118px;
+    height: 38px;
+    padding: 0 14px;
+    border-radius: 999px;
+    font-size: 0.72rem;
+  }
+
+  .calendar-side-content {
+    padding: 14px;
+  }
+
+  .calendar-detail-card {
+    padding: 14px;
+    border-radius: 18px;
+    background: rgba(255, 252, 248, 0.58);
+    border: 1px solid rgba(78, 55, 42, 0.08);
+  }
+
+  .calendar-detail-head {
+    align-items: center;
+    margin-bottom: 10px;
+  }
+
+  .calendar-detail-head strong {
+    font-size: 1.05rem;
+  }
+
+  .calendar-detail-head span {
+    font-size: 0.78rem;
+  }
+
+  .calendar-detail-head .status {
+    min-width: auto;
+    padding: 5px 9px;
+    font-size: 0.68rem;
+  }
+
+  .calendar-detail-card dl {
+    gap: 5px;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(78, 55, 42, 0.06);
+  }
+
+  .calendar-detail-card dl div {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .calendar-detail-card dt {
+    font-size: 0.62rem;
+    letter-spacing: 0.08em;
+  }
+
+  .calendar-detail-card dd {
+    font-size: 0.76rem;
+    font-weight: 800;
+  }
+
+  /* Esconde excesso de informação no mobile */
+  .calendar-detail-card dl div:nth-child(3),
+  .calendar-detail-card dl div:nth-child(4) {
+    display: none;
+  }
+
+  .calendar-detail-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  .calendar-detail-actions button {
+    flex: 1;
+    height: 34px;
+    padding: 0 8px;
+    border-radius: 999px;
+    font-size: 0.68rem;
+  }
+
+  .calendar-detail-actions button.danger {
+    grid-column: auto;
+    flex: 0.8;
+    background: rgba(243, 216, 209, 0.8);
+  }
 }
