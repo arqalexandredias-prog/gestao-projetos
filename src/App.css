@@ -210,6 +210,10 @@ nav button.active {
   color: #927868;
 }
 
+.mobile-tabs {
+  display: none;
+}
+
 .primary-button,
 .secondary-button,
 .filters button,
@@ -694,16 +698,62 @@ tr:last-child td {
 }
 
 @media (max-width: 620px) {
+  .sidebar {
+    display: none;
+  }
+
+  .app {
+    grid-template-columns: 1fr;
+  }
+
+  .content {
+    padding: 28px 18px 80px;
+  }
+
+  .topbar {
+    margin-bottom: 14px;
+  }
+
+  .topbar p {
+    display: none;
+  }
+
+  .topbar h1 {
+    font-size: 2rem;
+  }
+
+  .topbar .primary-button {
+    width: 100%;
+  }
+
+  .mobile-tabs {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin-bottom: 24px;
+  }
+
+  .mobile-tabs button {
+    height: 48px;
+    border: 1px solid rgba(78, 55, 42, 0.12);
+    border-radius: 16px;
+    background: rgba(255, 252, 248, 0.74);
+    color: #6f5545;
+    font-weight: 800;
+  }
+
+  .mobile-tabs button.active {
+    background: #2b201a;
+    color: #fffaf3;
+    border-color: #2b201a;
+  }
+
   .summary-grid {
     grid-template-columns: 1fr;
   }
 
   nav {
     grid-template-columns: 1fr;
-  }
-
-  .topbar .primary-button {
-    width: 100%;
   }
 
   .filters input,
@@ -734,24 +784,123 @@ tr:last-child td {
   .calendar-day span {
     display: none;
   }
-}@media (max-width: 620px) {
-  .sidebar {
+
+  .table-wrap {
+    overflow: visible;
+    border: 0;
+    background: transparent;
+  }
+
+  table {
+    min-width: 0;
+    width: 100%;
+  }
+
+  thead {
     display: none;
   }
 
-  .app {
-    grid-template-columns: 1fr;
+  tbody,
+  tr,
+  td {
+    display: block;
+    width: 100%;
   }
 
-  .content {
-    padding-top: 28px;
+  tr {
+    margin-bottom: 14px;
+    padding: 16px;
+    border: 1px solid rgba(78, 55, 42, 0.12);
+    border-radius: 22px;
+    background: rgba(255, 252, 248, 0.82);
+    box-shadow: 0 14px 34px rgba(68, 43, 27, 0.08);
   }
 
-  .topbar p {
-    display: none;
+  td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 9px 0;
+    border-bottom: 1px solid rgba(78, 55, 42, 0.08);
+    white-space: normal;
+    text-align: right;
+    font-size: 0.92rem;
   }
 
-  .topbar h1 {
-    font-size: 2rem;
+  td:last-child {
+    border-bottom: 0;
+    padding-bottom: 0;
+  }
+
+  td::before {
+    color: #7d6251;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    text-align: left;
+  }
+
+  td:nth-child(1)::before {
+    content: "Data";
+  }
+
+  td:nth-child(2)::before {
+    content: "Empreendimento";
+  }
+
+  td:nth-child(3)::before {
+    content: "Cliente";
+  }
+
+  td:nth-child(4)::before {
+    content: "Consultor";
+  }
+
+  td:nth-child(5)::before {
+    content: "Projeto";
+  }
+
+  td:nth-child(6)::before {
+    content: "Valor";
+  }
+
+  td:nth-child(7)::before {
+    content: "Comissão";
+  }
+
+  td:nth-child(8)::before {
+    content: "Recebido";
+  }
+
+  td:nth-child(9)::before {
+    content: "Falta receber";
+  }
+
+  td:nth-child(10)::before {
+    content: "Status";
+  }
+
+  td:nth-child(11)::before {
+    content: "Ações";
+  }
+
+  .row-actions {
+    justify-content: flex-end;
+    flex-wrap: wrap;
+  }
+
+  .money-pill,
+  .status {
+    min-width: auto;
+  }
+
+  .panel {
+    padding: 18px;
+  }
+
+  .panel-header button {
+    width: auto;
   }
 }

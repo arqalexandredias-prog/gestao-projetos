@@ -876,6 +876,24 @@ export default function App() {
           </button>
         </header>
 
+        <div className="mobile-tabs">
+          <button
+            type="button"
+            className={activePage === "resumo" ? "active" : ""}
+            onClick={() => setActivePage("resumo")}
+          >
+            Resumo
+          </button>
+
+          <button
+            type="button"
+            className={activePage === "projetos" ? "active" : ""}
+            onClick={() => setActivePage("projetos")}
+          >
+            Projetos
+          </button>
+        </div>
+
         {activePage === "resumo" ? (
           <section className="page-section">
             <div className="section-header">
