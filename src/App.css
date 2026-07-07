@@ -1873,4 +1873,138 @@ td {
   .topbar-brand {
     max-width: 100% !important;
   }
+}/* Calendário mobile mais delicado e premium */
+@media (max-width: 620px) {
+  .calendar-page {
+    gap: 12px;
+  }
+
+  .calendar-page-header {
+    gap: 12px;
+    margin-top: 4px;
+  }
+
+  .calendar-page-header p {
+    display: none;
+  }
+
+  .calendar-page-header h1 {
+    max-width: 100%;
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 2.35rem;
+    font-weight: 500;
+    line-height: 0.95;
+    letter-spacing: -0.07em;
+    text-transform: none;
+  }
+
+  .calendar-page-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 4px;
+  }
+
+  .calendar-page-actions button {
+    height: 38px;
+    padding: 0 8px;
+    border-radius: 999px;
+    background: rgba(255, 252, 248, 0.72);
+    border: 1px solid rgba(78, 55, 42, 0.08);
+    color: #725b4b;
+    box-shadow: none;
+    font-size: 0.72rem;
+    font-weight: 800;
+  }
+
+  .calendar-page-actions .primary-button {
+    background: #2b1f1a;
+    color: #fffaf3;
+    border: 0;
+    box-shadow: 0 10px 22px rgba(43, 31, 26, 0.12);
+  }
+
+  .full-calendar-card {
+    border-radius: 26px;
+    background: rgba(255, 252, 248, 0.58);
+    border: 1px solid rgba(78, 55, 42, 0.07);
+    box-shadow: 0 18px 42px rgba(68, 43, 27, 0.06);
+  }
+
+  .full-calendar-weekdays {
+    background: rgba(255, 252, 248, 0.48);
+    border-bottom: 1px solid rgba(78, 55, 42, 0.06);
+  }
+
+  .full-calendar-weekdays span {
+    padding: 11px 2px;
+    color: #8a705f;
+    font-size: 0.64rem;
+    font-weight: 850;
+    letter-spacing: 0.06em;
+  }
+
+  .full-calendar-day {
+    min-height: 66px;
+    padding: 5px 3px;
+    background: rgba(255, 252, 248, 0.38);
+    border-right: 1px solid rgba(78, 55, 42, 0.055);
+    border-bottom: 1px solid rgba(78, 55, 42, 0.055);
+  }
+
+  .full-calendar-day > strong {
+    width: 25px;
+    height: 25px;
+    margin: 0 auto 3px;
+    color: #2b1f1a;
+    font-size: 0.76rem;
+    font-weight: 800;
+  }
+
+  .full-calendar-day.is-selected {
+    background: rgba(255, 246, 235, 0.52);
+    box-shadow: inset 0 0 0 1.5px rgba(196, 122, 90, 0.7);
+  }
+
+  .full-calendar-day.is-today > strong {
+    background: #2b1f1a;
+    color: #fffaf3;
+    box-shadow: 0 8px 16px rgba(43, 31, 26, 0.14);
+  }
+
+  .calendar-event {
+    width: 6px;
+    height: 6px;
+    min-width: 6px;
+    max-width: 6px;
+    opacity: 0.8;
+  }
+
+  .calendar-side-panel {
+    margin-top: 4px;
+    border-radius: 24px;
+    background: rgba(255, 252, 248, 0.6);
+    border: 1px solid rgba(78, 55, 42, 0.07);
+    box-shadow: 0 16px 36px rgba(68, 43, 27, 0.05);
+  }
+
+  .calendar-side-header {
+    padding: 16px;
+  }
+
+  .calendar-side-header p {
+    font-size: 0.66rem;
+    letter-spacing: 0.14em;
+  }
+
+  .calendar-side-header h2 {
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 1.45rem;
+    font-weight: 500;
+  }
+
+  .calendar-side-header button {
+    height: 38px;
+    border-radius: 999px;
+    font-size: 0.76rem;
+  }
 }
