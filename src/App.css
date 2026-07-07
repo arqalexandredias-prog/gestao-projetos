@@ -1469,4 +1469,152 @@ td {
   .topbar-title span {
     font-size: 0.68rem;
   }
+}/* Marca em HTML/CSS — substitui a imagem da logo */
+.brand-wordmark {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: max-content;
+  max-width: 100%;
+  color: #2b1f1a;
+}
+
+.brand-monogram {
+  position: relative;
+  display: grid;
+  grid-template-columns: 32px 32px;
+  align-items: center;
+  width: 66px;
+  height: 52px;
+  flex: 0 0 auto;
+}
+
+.brand-letter-a,
+.brand-letter-d {
+  font-family: "Times New Roman", Georgia, serif;
+  font-size: 3.2rem;
+  font-weight: 400;
+  line-height: 0.8;
+  letter-spacing: -0.18em;
+}
+
+.brand-letter-a {
+  color: #2b1f1a;
+  transform: scaleX(0.82);
+}
+
+.brand-letter-d {
+  color: #cbb89a;
+  transform: translateX(-8px) scaleX(0.9);
+}
+
+.brand-monogram i {
+  position: absolute;
+  left: 22px;
+  bottom: 9px;
+  width: 22px;
+  height: 3px;
+  border-radius: 999px;
+  background: #c47a5a;
+}
+
+.brand-divider {
+  width: 1px;
+  height: 38px;
+  background: #cbb89a;
+  opacity: 0.9;
+}
+
+.brand-copy {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.brand-copy strong {
+  display: block;
+  color: #2b1f1a;
+  font-size: 1rem;
+  font-weight: 500;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  white-space: nowrap;
+}
+
+.brand-copy strong em {
+  color: #cbb89a;
+  font-style: normal;
+  font-weight: 400;
+}
+
+.brand-copy span {
+  display: block;
+  color: #2b1f1a;
+  font-size: 0.43rem;
+  font-weight: 700;
+  letter-spacing: 0.52em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.sidebar .brand-wordmark {
+  transform-origin: left center;
+  transform: scale(0.82);
+}
+
+.topbar .brand-wordmark {
+  transform-origin: left center;
+  transform: scale(0.82);
+}
+
+@media (max-width: 620px) {
+  .topbar {
+    align-items: flex-start;
+  }
+
+  .topbar-brand {
+    display: block;
+    max-width: calc(100% - 128px);
+  }
+
+  .topbar .brand-wordmark {
+    transform: none;
+    gap: 8px;
+  }
+
+  .topbar .brand-monogram {
+    grid-template-columns: 24px 24px;
+    width: 50px;
+    height: 40px;
+  }
+
+  .topbar .brand-letter-a,
+  .topbar .brand-letter-d {
+    font-size: 2.35rem;
+  }
+
+  .topbar .brand-letter-d {
+    transform: translateX(-6px) scaleX(0.9);
+  }
+
+  .topbar .brand-monogram i {
+    left: 16px;
+    bottom: 7px;
+    width: 16px;
+    height: 2px;
+  }
+
+  .topbar .brand-divider {
+    height: 30px;
+  }
+
+  .topbar .brand-copy strong {
+    font-size: 0.78rem;
+    white-space: normal;
+  }
+
+  .topbar .brand-copy span {
+    font-size: 0.34rem;
+    letter-spacing: 0.34em;
+  }
 }

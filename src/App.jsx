@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import "./App.css";
 
 const STORAGE_KEY = "alexandre-dias-gestao-projetos-v1";
-const LOGO_SRC = "/logo-dashboard.png";
 
 const STATUS_OPTIONS = ["Orçamento", "A receber", "Parcial", "Recebido", "Cancelado"];
 
@@ -174,11 +173,22 @@ function getStatusClass(status) {
 
 function BrandLogo({ mobile = false }) {
   return (
-    <img
-      src={LOGO_SRC}
-      alt="Alexandre Dias | Interiores - Gestão de Projetos"
-      className={mobile ? "brand-logo brand-logo-mobile" : "brand-logo"}
-    />
+    <div className={`brand-wordmark ${mobile ? "brand-wordmark-mobile" : ""}`}>
+      <div className="brand-monogram">
+        <span className="brand-letter-a">A</span>
+        <span className="brand-letter-d">D</span>
+        <i />
+      </div>
+
+      <div className="brand-divider" />
+
+      <div className="brand-copy">
+        <strong>
+          Alexandre Dias <em>| Interiores</em>
+        </strong>
+        <span>Gestão de Projetos</span>
+      </div>
+    </div>
   );
 }
 
@@ -1012,14 +1022,7 @@ export default function App() {
       <section className="content">
         <header className="topbar">
           <div className="topbar-brand">
-            <div className="mobile-logo-holder">
-              <BrandLogo mobile />
-            </div>
-
-            <div className="topbar-title">
-              <strong>Alexandre Dias | Interiores</strong>
-              <span>Gestão de Projetos</span>
-            </div>
+            <BrandLogo mobile />
           </div>
 
           <div className="topbar-actions">
