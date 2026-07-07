@@ -734,4 +734,24 @@ tr:last-child td {
   .calendar-day span {
     display: none;
   }
+}@media (max-width: 620px) {
+  .sidebar {
+    display: none;
+  }
+
+  .app {
+    grid-template-columns: 1fr;
+  }
+
+  .content {
+    padding-top: 28px;
+  }
+
+  .topbar p {
+    display: none;
+  }
+
+  .topbar h1 {
+    font-size: 2rem;
+  }
 }

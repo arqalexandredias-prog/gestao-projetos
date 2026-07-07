@@ -362,7 +362,7 @@ function ProjectFormModal({ form, setForm, editingId, onClose, onSubmit }) {
             <input
               type="text"
               value={form.consultant}
-              placeholder="Ex: Paula, Daiane, Fran"
+              placeholder="Ex: Paula"
               onChange={(event) =>
                 setForm((prev) => ({ ...prev, consultant: event.target.value }))
               }
