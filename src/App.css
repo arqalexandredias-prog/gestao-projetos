@@ -2126,4 +2126,184 @@ td {
     flex: 0.8;
     background: rgba(243, 216, 209, 0.8);
   }
+}/* Compactação geral do calendário mobile */
+@media (max-width: 620px) {
+  .calendar-page {
+    gap: 10px !important;
+  }
+
+  .calendar-page-header {
+    gap: 10px !important;
+    margin-top: 0 !important;
+  }
+
+  .calendar-page-header h1 {
+    font-size: 1.9rem !important;
+    line-height: 0.95 !important;
+    letter-spacing: -0.06em !important;
+    margin: 0 !important;
+  }
+
+  .calendar-page-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 7px !important;
+    margin-top: 2px !important;
+  }
+
+  .calendar-page-actions button {
+    height: 34px !important;
+    min-height: 34px !important;
+    padding: 0 8px !important;
+    border-radius: 999px !important;
+    font-size: 0.66rem !important;
+    font-weight: 850 !important;
+  }
+
+  .full-calendar-card {
+    border-radius: 20px !important;
+    box-shadow: 0 12px 28px rgba(68, 43, 27, 0.045) !important;
+  }
+
+  .full-calendar-weekdays span {
+    padding: 8px 1px !important;
+    font-size: 0.58rem !important;
+    letter-spacing: 0.04em !important;
+  }
+
+  .full-calendar-day {
+    min-height: 50px !important;
+    padding: 4px 2px !important;
+  }
+
+  .full-calendar-day > strong {
+    width: 22px !important;
+    height: 22px !important;
+    margin: 0 auto 2px !important;
+    font-size: 0.68rem !important;
+  }
+
+  .full-calendar-day.is-selected {
+    box-shadow: inset 0 0 0 1.3px rgba(196, 122, 90, 0.65) !important;
+  }
+
+  .calendar-event {
+    width: 5px !important;
+    height: 5px !important;
+    min-width: 5px !important;
+    max-width: 5px !important;
+  }
+
+  .calendar-side-panel {
+    margin-top: 10px !important;
+    border-radius: 20px !important;
+    box-shadow: 0 12px 28px rgba(68, 43, 27, 0.045) !important;
+  }
+
+  .calendar-side-header {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 10px !important;
+    padding: 13px 14px !important;
+  }
+
+  .calendar-side-header p {
+    margin: 0 0 3px !important;
+    font-size: 0.56rem !important;
+    letter-spacing: 0.14em !important;
+  }
+
+  .calendar-side-header h2 {
+    font-family: inherit !important;
+    font-size: 1rem !important;
+    font-weight: 850 !important;
+    letter-spacing: -0.03em !important;
+  }
+
+  .calendar-side-header button {
+    width: auto !important;
+    min-width: 104px !important;
+    height: 32px !important;
+    padding: 0 12px !important;
+    border-radius: 999px !important;
+    font-size: 0.66rem !important;
+  }
+
+  .calendar-side-content {
+    padding: 10px 12px 12px !important;
+  }
+
+  .calendar-detail-card {
+    padding: 11px 12px !important;
+    border-radius: 16px !important;
+  }
+
+  .calendar-detail-head {
+    margin-bottom: 8px !important;
+    align-items: flex-start !important;
+  }
+
+  .calendar-detail-head strong {
+    font-size: 0.95rem !important;
+    line-height: 1.1 !important;
+  }
+
+  .calendar-detail-head span {
+    font-size: 0.7rem !important;
+    margin-top: 2px !important;
+  }
+
+  .calendar-detail-head .status {
+    padding: 4px 8px !important;
+    font-size: 0.6rem !important;
+  }
+
+  .calendar-detail-card dl {
+    margin-top: 6px !important;
+    padding-top: 6px !important;
+    gap: 3px !important;
+  }
+
+  .calendar-detail-card dl div {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+  }
+
+  .calendar-detail-card dt {
+    font-size: 0.55rem !important;
+    letter-spacing: 0.08em !important;
+  }
+
+  .calendar-detail-card dd {
+    font-size: 0.68rem !important;
+    font-weight: 850 !important;
+  }
+
+  /* deixa só o essencial no card */
+  .calendar-detail-card dl div:nth-child(1),
+  .calendar-detail-card dl div:nth-child(2),
+  .calendar-detail-card dl div:nth-child(3),
+  .calendar-detail-card dl div:nth-child(4) {
+    display: none !important;
+  }
+
+  .calendar-detail-actions {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 6px !important;
+    margin-top: 9px !important;
+  }
+
+  .calendar-detail-actions button {
+    width: 100% !important;
+    height: 30px !important;
+    padding: 0 6px !important;
+    border-radius: 999px !important;
+    font-size: 0.6rem !important;
+  }
+
+  .calendar-detail-actions button.danger {
+    grid-column: auto !important;
+  }
 }
