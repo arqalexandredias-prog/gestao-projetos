@@ -1417,4 +1417,56 @@ td {
   .modal-actions button {
     width: 100%;
   }
+}.mobile-logo-holder {
+  display: none;
+}
+
+.topbar-title {
+  display: grid;
+  gap: 2px;
+}
+
+.topbar-title strong {
+  color: #211a16;
+  font-size: 0.88rem;
+  font-weight: 900;
+}
+
+.topbar-title span {
+  color: #7b6252;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.brand-logo-mobile {
+  width: 170px;
+  max-width: 170px;
+}
+
+@media (max-width: 620px) {
+  .topbar {
+    align-items: flex-start;
+  }
+
+  .topbar-brand {
+    display: grid;
+    gap: 8px;
+  }
+
+  .mobile-logo-holder {
+    display: block;
+  }
+
+  .brand-logo-mobile {
+    width: 172px;
+    max-width: 172px;
+  }
+
+  .topbar-title strong {
+    font-size: 0.82rem;
+  }
+
+  .topbar-title span {
+    font-size: 0.68rem;
+  }
 }

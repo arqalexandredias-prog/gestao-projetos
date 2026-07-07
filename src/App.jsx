@@ -38,7 +38,6 @@ function formatMoneyInput(value) {
 
 function formatMoneyInputFromNumber(value) {
   const number = Number(value);
-
   if (!Number.isFinite(number) || number <= 0) return "";
 
   return new Intl.NumberFormat("pt-BR", {
@@ -173,19 +172,12 @@ function getStatusClass(status) {
   return map[status] || "padrao";
 }
 
-function BrandLogo() {
+function BrandLogo({ mobile = false }) {
   return (
     <img
       src={LOGO_SRC}
       alt="Alexandre Dias | Interiores - Gestão de Projetos"
-      className="brand-logo"
-      style={{
-        display: "block",
-        width: "150px",
-        maxWidth: "150px",
-        height: "auto",
-        objectFit: "contain",
-      }}
+      className={mobile ? "brand-logo brand-logo-mobile" : "brand-logo"}
     />
   );
 }
@@ -1020,8 +1012,14 @@ export default function App() {
       <section className="content">
         <header className="topbar">
           <div className="topbar-brand">
-            <strong>Alexandre Dias | Interiores</strong>
-            <span>Gestão de Projetos</span>
+            <div className="mobile-logo-holder">
+              <BrandLogo mobile />
+            </div>
+
+            <div className="topbar-title">
+              <strong>Alexandre Dias | Interiores</strong>
+              <span>Gestão de Projetos</span>
+            </div>
           </div>
 
           <div className="topbar-actions">
