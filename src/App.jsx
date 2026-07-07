@@ -1070,11 +1070,9 @@ export default function App() {
           <section className="page-section">
             <section className="hero">
               <div>
-                <p>Alexandre Dias | Interiores</p>
                 <h1>
-                  O que vamos desenhar hoje, <span>Alexandre?</span>
+                  Vamos criar algo incrível, <span>Alexandre?</span>
                 </h1>
-                <small>Aqui está o resumo dos seus projetos e comissões.</small>
               </div>
 
               <button type="button" className="primary-button" onClick={openNewProject}>
