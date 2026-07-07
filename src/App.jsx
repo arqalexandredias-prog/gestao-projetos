@@ -137,6 +137,11 @@ function isSold(project) {
   return project.status !== "Orçamento" && project.status !== "Cancelado";
 }
 
+function isActiveProject(project) {
+  const status = getDisplayStatus(project);
+  return status !== "Recebido" && status !== "Cancelado";
+}
+
 function emptyProjectForm() {
   return {
     date: todayISO(),
@@ -174,16 +179,34 @@ function getStatusClass(status) {
   return map[status] || "padrao";
 }
 
+function LogoMark({ compact = false }) {
+  return (
+    <div className={`logo-mark ${compact ? "logo-mark-compact" : ""}`} aria-label="AD">
+      <span className="logo-a">A</span>
+      <span className="logo-d">D</span>
+      <i />
+    </div>
+  );
+}
+
 function StatusBadge({ status }) {
   return <span className={`status status-${getStatusClass(status)}`}>{status}</span>;
 }
 
-function SummaryCard({ label, value, helper }) {
+function SummaryCard({ icon, label, value, helper, tone = "neutral" }) {
   return (
-    <article className="summary-card">
-      <span>{label}</span>
-      <strong>{value}</strong>
-      {helper ? <small>{helper}</small> : null}
+    <article className={`summary-card summary-card-${tone}`}>
+      <div className="summary-icon">{icon}</div>
+
+      <div>
+        <span>{label}</span>
+        <strong>{value}</strong>
+        {helper ? <small>{helper}</small> : null}
+      </div>
+
+      <button type="button" aria-label="Mais opções">
+        ⋯
+      </button>
     </article>
   );
 }
@@ -339,7 +362,7 @@ function ProjectFormModal({ form, setForm, editingId, onClose, onSubmit }) {
             <input
               type="text"
               value={form.development}
-              placeholder="Ex: Brava Home Resort"
+              placeholder="Ex: Paganini Tower"
               onChange={(event) =>
                 setForm((prev) => ({ ...prev, development: event.target.value }))
               }
@@ -374,7 +397,7 @@ function ProjectFormModal({ form, setForm, editingId, onClose, onSubmit }) {
             <input
               type="text"
               value={form.project}
-              placeholder="Ex: Cozinha, dormitório, apto completo"
+              placeholder="Ex: Apto completo"
               onChange={(event) => setForm((prev) => ({ ...prev, project: event.target.value }))}
               required
             />
@@ -499,6 +522,103 @@ function ProjectFormModal({ form, setForm, editingId, onClose, onSubmit }) {
         </form>
       </div>
     </div>
+  );
+}
+
+function DashboardCalendar({ month, onMonthChange, selectedDate, onSelectDate, projects }) {
+  const [year, monthNumber] = month.split("-").map(Number);
+  const firstDay = new Date(year, monthNumber - 1, 1);
+  const daysInMonth = new Date(year, monthNumber, 0).getDate();
+  const startWeekday = firstDay.getDay();
+
+  const projectsByDate = projects.reduce((acc, project) => {
+    if (!acc[project.date]) acc[project.date] = [];
+    acc[project.date].push(project);
+    return acc;
+  }, {});
+
+  const cells = [];
+
+  for (let index = 0; index < startWeekday; index += 1) {
+    cells.push(null);
+  }
+
+  for (let day = 1; day <= daysInMonth; day += 1) {
+    const date = `${year}-${String(monthNumber).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    cells.push(date);
+  }
+
+  function changeMonth(direction) {
+    const next = new Date(year, monthNumber - 1 + direction, 1);
+    const nextMonth = `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, "0")}`;
+    onMonthChange(nextMonth);
+    onSelectDate(null);
+  }
+
+  return (
+    <div className="mini-calendar">
+      <div className="mini-calendar-header">
+        <button type="button" onClick={() => changeMonth(-1)}>
+          ‹
+        </button>
+
+        <strong>{formatMonthLabel(month)}</strong>
+
+        <button type="button" onClick={() => changeMonth(1)}>
+          ›
+        </button>
+      </div>
+
+      <div className="mini-calendar-weekdays">
+        <span>Dom</span>
+        <span>Seg</span>
+        <span>Ter</span>
+        <span>Qua</span>
+        <span>Qui</span>
+        <span>Sex</span>
+        <span>Sáb</span>
+      </div>
+
+      <div className="mini-calendar-grid">
+        {cells.map((date, index) => {
+          const hasProjects = date && projectsByDate[date]?.length;
+          const isSelected = date && selectedDate === date;
+          const isToday = date === todayISO();
+
+          return (
+            <button
+              key={`${date || "empty"}-${index}`}
+              type="button"
+              className={`${!date ? "is-empty" : ""} ${hasProjects ? "has-projects" : ""} ${
+                isSelected ? "is-selected" : ""
+              } ${isToday ? "is-today" : ""}`}
+              disabled={!date}
+              onClick={() => onSelectDate(date)}
+            >
+              {date ? Number(date.slice(-2)) : ""}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function ProjectListItem({ project, onEdit }) {
+  return (
+    <button type="button" className="project-line" onClick={() => onEdit(project)}>
+      <div className="project-line-icon">$</div>
+
+      <div>
+        <strong>{project.client || "Cliente sem nome"}</strong>
+        <span>{project.development || project.project || "Projeto sem empreendimento"}</span>
+      </div>
+
+      <div className="project-line-value">
+        <strong>{formatCurrency(getPendingCommission(project))}</strong>
+        <span>{getDisplayStatus(project)}</span>
+      </div>
+    </button>
   );
 }
 
@@ -660,9 +780,13 @@ export default function App() {
   const [calendarMonth, setCalendarMonth] = useState(todayISO().slice(0, 7));
   const [selectedDate, setSelectedDate] = useState(null);
 
+  const [dashboardDate, setDashboardDate] = useState(todayISO());
+
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(projects));
   }, [projects]);
+
+  const currentMonthForUi = selectedMonth || todayISO().slice(0, 7);
 
   const monthProjects = useMemo(() => {
     if (!selectedMonth) return projects;
@@ -704,8 +828,34 @@ export default function App() {
       commission: soldProjects.reduce((sum, project) => sum + getCommission(project), 0),
       received: soldProjects.reduce((sum, project) => sum + getReceivedCommission(project), 0),
       pending: soldProjects.reduce((sum, project) => sum + getPendingCommission(project), 0),
+      active: monthProjects.filter(isActiveProject).length,
     };
   }, [monthProjects]);
+
+  const selectedDayProjects = useMemo(() => {
+    if (!dashboardDate) return [];
+    return projects
+      .filter((project) => project.date === dashboardDate)
+      .sort((a, b) => a.client.localeCompare(b.client));
+  }, [projects, dashboardDate]);
+
+  const nextProjects = useMemo(() => {
+    return [...projects]
+      .filter((project) => project.date >= todayISO() && project.status !== "Cancelado")
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .slice(0, 4);
+  }, [projects]);
+
+  const pendingProjects = useMemo(() => {
+    return [...monthProjects]
+      .filter((project) => getPendingCommission(project) > 0 && project.status !== "Cancelado")
+      .sort((a, b) => getPendingCommission(b) - getPendingCommission(a))
+      .slice(0, 4);
+  }, [monthProjects]);
+
+  const progressPercent = summary.commission
+    ? Math.min(Math.round((summary.received / summary.commission) * 100), 100)
+    : 0;
 
   function openNewProject() {
     setEditingId(null);
@@ -739,6 +889,10 @@ export default function App() {
 
   function handleCalendarMonthChange(nextMonth) {
     setCalendarMonth(nextMonth);
+    setSelectedMonth(nextMonth);
+  }
+
+  function handleDashboardMonthChange(nextMonth) {
     setSelectedMonth(nextMonth);
   }
 
@@ -837,7 +991,7 @@ export default function App() {
     <main className="app">
       <aside className="sidebar">
         <div className="brand">
-          <div className="brand-mark">AD</div>
+          <LogoMark />
 
           <div>
             <strong>Alexandre Dias | Interiores</strong>
@@ -851,6 +1005,7 @@ export default function App() {
             className={activePage === "resumo" ? "active" : ""}
             onClick={() => setActivePage("resumo")}
           >
+            <span>⌂</span>
             Resumo
           </button>
 
@@ -859,20 +1014,37 @@ export default function App() {
             className={activePage === "projetos" ? "active" : ""}
             onClick={() => setActivePage("projetos")}
           >
+            <span>□</span>
             Projetos
           </button>
+
+          <button type="button" onClick={openCalendar}>
+            <span>◷</span>
+            Calendário
+          </button>
         </nav>
+
+        <div className="sidebar-footer">
+          <div className="avatar">AD</div>
+          <div>
+            <strong>Alexandre Dias</strong>
+            <span>Arquitetura & Interiores</span>
+          </div>
+        </div>
       </aside>
 
       <section className="content">
         <header className="topbar">
-          <div>
-            <p>Alexandre Dias | Interiores</p>
-            <h1>Gestão de Projetos</h1>
+          <div className="topbar-brand">
+            <LogoMark compact />
+            <div>
+              <strong>Alexandre Dias | Interiores</strong>
+              <span>Gestão de Projetos</span>
+            </div>
           </div>
 
-          <button type="button" className="primary-button" onClick={openNewProject}>
-            + Novo projeto
+          <button type="button" className="ghost-button" onClick={openCalendar}>
+            Calendário
           </button>
         </header>
 
@@ -896,61 +1068,217 @@ export default function App() {
 
         {activePage === "resumo" ? (
           <section className="page-section">
-            <div className="section-header">
+            <section className="hero">
               <div>
-                <p>Resumo financeiro</p>
-                <h1>{formatMonthLabel(selectedMonth)}</h1>
+                <p>Alexandre Dias | Interiores</p>
+                <h1>
+                  O que vamos desenhar hoje, <span>Alexandre?</span>
+                </h1>
+                <small>Aqui está o resumo dos seus projetos e comissões.</small>
               </div>
 
-              <div className="filters-inline">
-                <button type="button" className="calendar-open-button" onClick={openCalendar}>
-                  <span>📅</span>
-                  {formatMonthLabel(selectedMonth)}
-                </button>
-              </div>
-            </div>
+              <button type="button" className="primary-button" onClick={openNewProject}>
+                + Novo projeto
+              </button>
+            </section>
 
-            <div className="summary-grid">
+            <section className="summary-grid">
               <SummaryCard
+                icon="▢"
                 label="Vendido no mês"
                 value={formatCurrency(summary.sold)}
                 helper="Sem orçamentos e cancelados"
               />
 
               <SummaryCard
-                label="Comissão prevista"
-                value={formatCurrency(summary.commission)}
-                helper="Total calculado"
+                icon="▱"
+                label="Projetos ativos"
+                value={String(summary.active)}
+                helper="Em aberto no período"
               />
 
               <SummaryCard
+                icon="↓"
                 label="Recebido"
                 value={formatCurrency(summary.received)}
                 helper="Comissão já recebida"
+                tone="received"
               />
 
               <SummaryCard
+                icon="↑"
                 label="A receber"
                 value={formatCurrency(summary.pending)}
                 helper="Comissão pendente"
+                tone="pending"
               />
-            </div>
+            </section>
+
+            <section className="dashboard-grid">
+              <div className="panel agenda-panel">
+                <div className="panel-header">
+                  <div>
+                    <p>Agenda</p>
+                    <h2>Projetos do mês</h2>
+                  </div>
+
+                  <button type="button" onClick={openCalendar}>
+                    Ver calendário
+                  </button>
+                </div>
+
+                <div className="agenda-layout">
+                  <DashboardCalendar
+                    month={currentMonthForUi}
+                    onMonthChange={handleDashboardMonthChange}
+                    selectedDate={dashboardDate}
+                    onSelectDate={setDashboardDate}
+                    projects={projects}
+                  />
+
+                  <div className="agenda-list">
+                    <div className="list-title">
+                      <strong>
+                        {dashboardDate ? `Eventos de ${formatDate(dashboardDate)}` : "Próximos projetos"}
+                      </strong>
+                      <span>
+                        {dashboardDate
+                          ? `${selectedDayProjects.length} ${
+                              selectedDayProjects.length === 1 ? "registro" : "registros"
+                            }`
+                          : `${nextProjects.length} próximos`}
+                      </span>
+                    </div>
+
+                    {(dashboardDate ? selectedDayProjects : nextProjects).length ? (
+                      (dashboardDate ? selectedDayProjects : nextProjects).map((project) => (
+                        <button
+                          type="button"
+                          className="agenda-item"
+                          key={project.id}
+                          onClick={() => openEditProject(project)}
+                        >
+                          <div>
+                            <strong>{project.client || "Cliente sem nome"}</strong>
+                            <span>{project.development || project.project || "Sem empreendimento"}</span>
+                          </div>
+
+                          <StatusBadge status={getDisplayStatus(project)} />
+                        </button>
+                      ))
+                    ) : (
+                      <div className="soft-empty">
+                        Nenhum projeto nessa data. Um raro momento de paz no universo dos planejados.
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <aside className="side-stack">
+                <div className="panel side-panel">
+                  <div className="panel-header compact">
+                    <div>
+                      <p>Atenção</p>
+                      <h2>Comissões a receber</h2>
+                    </div>
+
+                    <button type="button" onClick={() => setActivePage("projetos")}>
+                      Ver tudo
+                    </button>
+                  </div>
+
+                  <div className="project-lines">
+                    {pendingProjects.length ? (
+                      pendingProjects.map((project) => (
+                        <ProjectListItem key={project.id} project={project} onEdit={openEditProject} />
+                      ))
+                    ) : (
+                      <div className="soft-empty">Nenhuma comissão pendente neste período.</div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="panel side-panel">
+                  <div className="panel-header compact">
+                    <div>
+                      <p>Progresso</p>
+                      <h2>Recebimento do mês</h2>
+                    </div>
+                  </div>
+
+                  <div className="progress-card">
+                    <div>
+                      <strong>{progressPercent}%</strong>
+                      <span>
+                        {formatCurrency(summary.received)} de {formatCurrency(summary.commission)}
+                      </span>
+                    </div>
+
+                    <div className="progress-track">
+                      <i style={{ width: `${progressPercent}%` }} />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="panel side-panel">
+                  <div className="panel-header compact">
+                    <div>
+                      <p>Próximos</p>
+                      <h2>Lançamentos</h2>
+                    </div>
+                  </div>
+
+                  <div className="project-lines">
+                    {nextProjects.length ? (
+                      nextProjects.slice(0, 3).map((project) => (
+                        <button
+                          type="button"
+                          className="launch-line"
+                          key={project.id}
+                          onClick={() => openEditProject(project)}
+                        >
+                          <div>
+                            <strong>{project.client || "Cliente sem nome"}</strong>
+                            <span>{project.development || project.project || "Projeto"}</span>
+                          </div>
+
+                          <span>{formatDate(project.date)}</span>
+                        </button>
+                      ))
+                    ) : (
+                      <div className="soft-empty">Nenhum próximo lançamento cadastrado.</div>
+                    )}
+                  </div>
+                </div>
+              </aside>
+            </section>
+
+            <footer className="quote-bar">
+              “Arquitetura é transformar necessidades em experiências.” <span>— Alexandre Dias</span>
+            </footer>
           </section>
         ) : null}
 
         {activePage === "projetos" ? (
           <section className="page-section">
-            <div className="section-header">
+            <section className="hero hero-small">
               <div>
+                <p>Controle</p>
                 <h1>Projetos</h1>
+                <small>Lista compacta para acompanhar clientes, comissões e recebimentos.</small>
               </div>
-            </div>
+
+              <button type="button" className="primary-button" onClick={openNewProject}>
+                + Novo projeto
+              </button>
+            </section>
 
             <div className="filters">
               <input
                 type="search"
                 value={search}
-                placeholder="Buscar por data, empreendimento, cliente, consultor ou projeto..."
+                placeholder="Buscar por cliente, empreendimento, consultor ou projeto..."
                 onChange={(event) => setSearch(event.target.value)}
               />
 
