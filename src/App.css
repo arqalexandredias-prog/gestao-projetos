@@ -1,5 +1,6 @@
 :root {
   font-family:
+    Montserrat,
     Inter,
     ui-sans-serif,
     system-ui,
@@ -45,15 +46,13 @@ button {
   min-height: 100vh;
 }
 
-/* SIDEBAR */
-
 .sidebar {
   position: sticky;
   top: 0;
   height: 100vh;
   padding: 28px 22px;
   background:
-    radial-gradient(circle at top, rgba(203, 184, 154, 0.24), transparent 34%),
+    radial-gradient(circle at top, rgba(203, 184, 154, 0.2), transparent 34%),
     linear-gradient(180deg, #2b1f1a 0%, #211712 100%);
   color: #fffaf3;
   box-shadow: 18px 0 60px rgba(43, 31, 26, 0.16);
@@ -61,85 +60,53 @@ button {
 
 .brand {
   display: grid;
-  gap: 16px;
-  justify-items: start;
+  gap: 14px;
   padding-bottom: 28px;
   margin-bottom: 22px;
   border-bottom: 1px solid rgba(255, 250, 243, 0.1);
-}
-
-.brand strong {
-  display: block;
-  font-size: 1rem;
-  line-height: 1.2;
-}
-
-.brand span {
-  display: block;
-  margin-top: 5px;
-  color: rgba(255, 250, 243, 0.64);
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
-/* LOGO */
-
-.logo-mark {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 54px;
-  height: 54px;
-  border-radius: 18px;
-  background:
-    linear-gradient(135deg, rgba(246, 242, 237, 0.96), rgba(203, 184, 154, 0.92));
-  color: #2b1f1a;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.55),
-    0 16px 34px rgba(0, 0, 0, 0.18);
   overflow: hidden;
 }
 
-.logo-mark strong {
-  position: relative;
-  z-index: 2;
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: 1.2rem;
-  font-weight: 700;
-  letter-spacing: -0.08em;
+.brand-logo {
+  display: block;
+  width: 150px;
+  max-width: 150px;
+  height: auto;
+  object-fit: contain;
 }
 
-.logo-mark i {
-  position: absolute;
-  left: 50%;
-  bottom: 11px;
-  width: 24px;
-  height: 3px;
-  border-radius: 999px;
-  background: #c47a5a;
-  transform: translateX(-50%);
+.brand-logo-compact {
+  width: 180px;
+  max-width: 180px;
 }
 
-.logo-mark-compact {
-  width: 34px;
-  height: 34px;
-  border-radius: 12px;
-  box-shadow: none;
+.brand-logo-dashboard {
+  width: 320px;
+  max-width: 320px;
 }
 
-.logo-mark-compact strong {
-  font-size: 0.86rem;
+.dashboard-logo-wrap {
+  display: grid;
+  gap: 18px;
+  justify-items: start;
+  width: 100%;
+  overflow: hidden;
 }
 
-.logo-mark-compact i {
-  bottom: 7px;
-  width: 16px;
-  height: 2px;
+.sidebar .brand-logo {
+  width: 150px;
+  max-width: 150px;
 }
 
-/* NAV */
+.topbar .brand-logo {
+  width: 180px;
+  max-width: 180px;
+}
+
+.welcome-card .brand-logo {
+  width: 320px;
+  max-width: 100%;
+}
 
 nav {
   display: grid;
@@ -184,33 +151,32 @@ nav button.active {
   border-top: 1px solid rgba(255, 250, 243, 0.1);
 }
 
-.avatar {
+.sidebar-footer > strong {
   display: grid;
   place-items: center;
   width: 42px;
   height: 42px;
   border-radius: 50%;
-  background: #f6f2ed;
+  background: #fffaf3;
   color: #2b1f1a;
   font-weight: 900;
 }
 
-.sidebar-footer strong {
+.sidebar-footer div strong {
   display: block;
   font-size: 0.86rem;
 }
 
-.sidebar-footer span {
+.sidebar-footer div span {
   display: block;
   margin-top: 3px;
   color: rgba(255, 250, 243, 0.6);
   font-size: 0.74rem;
 }
 
-/* MAIN */
-
 .content {
   padding: 26px 32px 34px;
+  min-width: 0;
 }
 
 .topbar {
@@ -226,20 +192,8 @@ nav button.active {
 .topbar-brand {
   display: flex;
   align-items: center;
-  gap: 10px;
-}
-
-.topbar-brand strong {
-  display: block;
-  color: #2b1f1a;
-  font-size: 0.9rem;
-}
-
-.topbar-brand span {
-  display: block;
-  margin-top: 2px;
-  color: #8b6b55;
-  font-size: 0.76rem;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .topbar-actions {
@@ -267,8 +221,6 @@ nav button.active {
   gap: 22px;
 }
 
-/* HERO */
-
 .hero {
   display: flex;
   align-items: flex-start;
@@ -279,7 +231,6 @@ nav button.active {
 .hero p,
 .panel-header p,
 .modal-header p,
-.calendar-details-header p,
 .calendar-page-header p,
 .calendar-side-header p {
   margin: 0 0 7px;
@@ -321,10 +272,7 @@ nav button.active {
     radial-gradient(circle at 90% 0%, rgba(196, 122, 90, 0.13), transparent 24%),
     rgba(255, 252, 248, 0.7);
   box-shadow: 0 22px 60px rgba(68, 43, 27, 0.075);
-}
-
-.welcome-card h1 {
-  max-width: 720px;
+  overflow: hidden;
 }
 
 .hero-small h1 {
@@ -333,13 +281,9 @@ nav button.active {
   font-weight: 900;
 }
 
-/* BUTTONS */
-
 .primary-button,
 .secondary-button,
 .filters button,
-.filters-inline button,
-.calendar-toolbar button,
 .panel-header button,
 .row-actions button,
 .calendar-page-actions button,
@@ -360,11 +304,6 @@ nav button.active {
   white-space: nowrap;
 }
 
-.primary-button:hover {
-  transform: translateY(-1px);
-  background: #3a2a22;
-}
-
 .secondary-button {
   padding: 13px 18px;
   background: #eee0d1;
@@ -378,8 +317,6 @@ nav button.active {
   font-size: 0.82rem;
 }
 
-/* SUMMARY */
-
 .summary-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -387,7 +324,6 @@ nav button.active {
 }
 
 .summary-card {
-  position: relative;
   display: grid;
   grid-template-columns: auto 1fr;
   gap: 15px;
@@ -397,7 +333,6 @@ nav button.active {
   border-radius: 22px;
   background: rgba(255, 252, 248, 0.78);
   box-shadow: 0 18px 48px rgba(68, 43, 27, 0.07);
-  backdrop-filter: blur(16px);
 }
 
 .summary-icon {
@@ -444,8 +379,6 @@ nav button.active {
   background: #f7dfdf;
 }
 
-/* DASHBOARD */
-
 .dashboard-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.55fr) minmax(320px, 0.85fr);
@@ -458,11 +391,6 @@ nav button.active {
   border-radius: 26px;
   background: rgba(255, 252, 248, 0.78);
   box-shadow: 0 22px 60px rgba(68, 43, 27, 0.08);
-  backdrop-filter: blur(16px);
-}
-
-.agenda-panel {
-  padding: 20px;
 }
 
 .panel-header {
@@ -563,11 +491,6 @@ nav button.active {
   grid-template-columns: 1fr auto;
 }
 
-.launch-line > span {
-  color: #7b6252;
-  font-weight: 800;
-}
-
 .progress-card {
   display: grid;
   gap: 13px;
@@ -611,22 +534,15 @@ nav button.active {
   color: #c47a5a;
 }
 
-/* FILTERS */
-
-.filters,
-.filters-inline {
+.filters {
   display: flex;
   gap: 10px;
   align-items: center;
   flex-wrap: wrap;
-}
-
-.filters {
   padding: 13px;
   border: 1px solid rgba(78, 55, 42, 0.1);
   border-radius: 20px;
   background: rgba(255, 252, 248, 0.72);
-  box-shadow: 0 14px 38px rgba(68, 43, 27, 0.055);
 }
 
 .filters input[type="search"] {
@@ -657,23 +573,11 @@ textarea {
   resize: vertical;
 }
 
-input:focus,
-select:focus,
-textarea:focus {
-  border-color: rgba(126, 82, 52, 0.55);
-  box-shadow: 0 0 0 4px rgba(126, 82, 52, 0.12);
-}
-
-.filters button,
-.filters-inline button,
-.calendar-toolbar button {
+.filters button {
   height: 42px;
   padding: 0 13px;
-  border: 0;
-  border-radius: 13px;
   background: #efe1d2;
   color: #34251d;
-  font-weight: 850;
 }
 
 .calendar-open-button {
@@ -682,14 +586,11 @@ textarea:focus {
   gap: 8px;
 }
 
-/* TABLE */
-
 .table-wrap {
   overflow: auto;
   border: 1px solid rgba(78, 55, 42, 0.1);
   border-radius: 20px;
   background: rgba(255, 252, 248, 0.76);
-  box-shadow: 0 14px 38px rgba(68, 43, 27, 0.055);
 }
 
 table {
@@ -724,14 +625,6 @@ td {
   font-weight: 600;
 }
 
-tr:last-child td {
-  border-bottom: 0;
-}
-
-.actions-col {
-  width: 220px;
-}
-
 .row-actions {
   display: flex;
   gap: 8px;
@@ -739,12 +632,9 @@ tr:last-child td {
 
 .row-actions button {
   padding: 8px 10px;
-  border: 0;
-  border-radius: 999px;
   background: #efe1d2;
   color: #34251d;
   font-size: 0.74rem;
-  font-weight: 850;
 }
 
 .row-actions button.danger {
@@ -752,9 +642,8 @@ tr:last-child td {
   color: #8f2b19;
 }
 
-/* STATUS */
-
-.status {
+.status,
+.money-pill {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -780,32 +669,13 @@ tr:last-child td {
   color: #5d3bb0;
 }
 
-.status-recebido {
-  background: #dff1df;
-  color: #2d6d35;
-}
-
-.status-cancelado {
-  background: #f2d8d8;
-  color: #8d2929;
-}
-
-.money-pill {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 92px;
-  padding: 6px 9px;
-  border-radius: 999px;
-  font-weight: 850;
-  font-size: 0.78rem;
-}
-
+.status-recebido,
 .money-ok {
   background: #dff1df;
   color: #2d6d35;
 }
 
+.status-cancelado,
 .money-pending {
   background: #f8d9d9;
   color: #a12626;
@@ -826,8 +696,6 @@ tr:last-child td {
   padding: 16px;
   font-size: 0.82rem;
 }
-
-/* FULL CALENDAR PAGE */
 
 .calendar-page {
   display: grid;
@@ -867,7 +735,6 @@ tr:last-child td {
 }
 
 .calendar-page-actions .primary-button {
-  border: 0;
   color: #fffaf3;
 }
 
@@ -883,7 +750,6 @@ tr:last-child td {
   align-items: center;
   height: 26px;
   padding: 0 10px;
-  border: 1px solid rgba(78, 55, 42, 0.1);
   border-radius: 999px;
   background: rgba(255, 252, 248, 0.64);
   color: #7b6252;
@@ -903,11 +769,6 @@ tr:last-child td {
   border: 1px solid rgba(78, 55, 42, 0.1);
   border-radius: 24px;
   background: rgba(255, 252, 248, 0.78);
-  box-shadow: 0 22px 60px rgba(68, 43, 27, 0.075);
-  backdrop-filter: blur(16px);
-}
-
-.full-calendar-card {
   overflow: hidden;
 }
 
@@ -937,15 +798,10 @@ tr:last-child td {
   border-right: 1px solid rgba(78, 55, 42, 0.08);
   border-bottom: 1px solid rgba(78, 55, 42, 0.08);
   background: rgba(255, 252, 248, 0.55);
-  transition: 0.18s ease;
 }
 
 .full-calendar-day:nth-child(7n) {
   border-right: 0;
-}
-
-.full-calendar-day:hover:not(.is-empty) {
-  background: rgba(255, 246, 235, 0.92);
 }
 
 .full-calendar-day.is-empty {
@@ -1028,7 +884,6 @@ tr:last-child td {
 .calendar-side-panel {
   position: sticky;
   top: 24px;
-  overflow: hidden;
 }
 
 .calendar-side-header {
@@ -1044,7 +899,6 @@ tr:last-child td {
   margin: 0;
   color: #211a16;
   font-size: 1.2rem;
-  letter-spacing: -0.04em;
 }
 
 .calendar-side-header button {
@@ -1053,7 +907,6 @@ tr:last-child td {
   background: #2b1f1a;
   color: #fffaf3;
   font-size: 0.78rem;
-  white-space: nowrap;
 }
 
 .calendar-side-content {
@@ -1146,8 +999,6 @@ tr:last-child td {
   color: #8f2b19;
 }
 
-/* MODAL */
-
 .modal-backdrop {
   position: fixed;
   inset: 0;
@@ -1164,10 +1015,8 @@ tr:last-child td {
   max-height: calc(100vh - 44px);
   overflow: auto;
   padding: 24px;
-  border: 1px solid rgba(255, 255, 255, 0.32);
   border-radius: 28px;
   background: #fffaf5;
-  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.26);
 }
 
 .modal-header {
@@ -1177,11 +1026,9 @@ tr:last-child td {
   margin-bottom: 22px;
 }
 
-.modal-header h2,
-.calendar-details-header h3 {
+.modal-header h2 {
   margin: 0;
   color: #211a16;
-  letter-spacing: -0.04em;
 }
 
 .icon-button {
@@ -1192,7 +1039,6 @@ tr:last-child td {
   background: #efe1d2;
   color: #2b201a;
   font-size: 1.6rem;
-  line-height: 1;
 }
 
 .project-form {
@@ -1232,7 +1078,6 @@ tr:last-child td {
   color: #7d6251;
   font-size: 0.68rem;
   font-weight: 850;
-  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
@@ -1253,8 +1098,6 @@ tr:last-child td {
   height: 42px;
 }
 
-/* RESPONSIVE */
-
 @media (max-width: 1120px) {
   .app {
     grid-template-columns: 1fr;
@@ -1272,10 +1115,7 @@ tr:last-child td {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .dashboard-grid {
-    grid-template-columns: 1fr;
-  }
-
+  .dashboard-grid,
   .full-calendar-layout {
     grid-template-columns: 1fr;
   }
@@ -1325,20 +1165,14 @@ tr:last-child td {
     padding-bottom: 12px;
   }
 
-  .topbar-brand .logo-mark {
-    display: none;
+  .topbar .brand-logo {
+    width: 165px;
+    max-width: 165px;
   }
 
-  .topbar-brand strong {
-    font-size: 0.86rem;
-  }
-
-  .topbar-brand span {
-    font-size: 0.68rem;
-  }
-
-  .topbar-actions {
-    gap: 6px;
+  .welcome-card .brand-logo {
+    width: 230px;
+    max-width: 100%;
   }
 
   .topbar-primary {
@@ -1366,20 +1200,6 @@ tr:last-child td {
 
   .hero h1 {
     font-size: 1.65rem;
-    line-height: 1.05;
-  }
-
-  .hero small {
-    margin-top: 8px;
-    font-size: 0.82rem;
-  }
-
-  .hero .primary-button {
-    justify-self: start;
-    height: 38px;
-    padding: 0 14px;
-    border-radius: 999px;
-    font-size: 0.82rem;
   }
 
   .summary-grid {
@@ -1412,62 +1232,25 @@ tr:last-child td {
 
   .summary-card small {
     font-size: 0.65rem;
-    line-height: 1.25;
   }
 
-  .agenda-panel,
   .side-panel {
     padding: 14px;
     border-radius: 20px;
   }
 
-  .panel-header {
-    margin-bottom: 12px;
-  }
-
-  .panel-header h2 {
-    font-size: 1.02rem;
-  }
-
-  .panel-header p {
-    font-size: 0.64rem;
-  }
-
-  .project-line,
-  .launch-line {
-    padding: 10px;
-    border-radius: 13px;
-  }
-
-  .quote-bar {
-    font-size: 0.74rem;
-  }
-
-  .filters {
-    padding: 10px;
-    gap: 8px;
-    border-radius: 18px;
-  }
-
   .filters input[type="search"],
   .filters button,
-  .filters select,
-  .filters .calendar-open-button {
+  .filters select {
     width: 100%;
     height: 38px;
     font-size: 0.76rem;
-  }
-
-  .filters .calendar-open-button,
-  .filters button {
-    justify-content: center;
   }
 
   .table-wrap {
     overflow: visible;
     border: 0;
     background: transparent;
-    box-shadow: none;
   }
 
   .table-wrap table {
@@ -1493,21 +1276,17 @@ tr:last-child td {
       "client pending"
       "development actions";
     gap: 3px 10px;
-    margin: 0;
     padding: 11px 12px;
     border: 1px solid rgba(78, 55, 42, 0.1);
     border-radius: 16px;
     background: rgba(255, 252, 248, 0.78);
-    box-shadow: 0 8px 18px rgba(68, 43, 27, 0.05);
   }
 
   .table-wrap td {
     display: none;
-    width: auto;
     padding: 0;
     border: 0;
     white-space: normal;
-    text-align: left;
   }
 
   .table-wrap td:nth-child(1) {
@@ -1515,7 +1294,6 @@ tr:last-child td {
     grid-area: date;
     color: #8b6b55;
     font-size: 0.66rem;
-    font-weight: 750;
   }
 
   .table-wrap td:nth-child(2) {
@@ -1523,9 +1301,6 @@ tr:last-child td {
     grid-area: development;
     color: #7b6252;
     font-size: 0.76rem;
-    font-weight: 700;
-    overflow: hidden;
-    text-overflow: ellipsis;
   }
 
   .table-wrap td:nth-child(3) {
@@ -1534,42 +1309,24 @@ tr:last-child td {
     color: #241914;
     font-size: 0.92rem;
     font-weight: 850;
-    overflow: hidden;
-    text-overflow: ellipsis;
   }
 
   .table-wrap td:nth-child(9) {
     display: flex;
     grid-area: pending;
-    align-items: center;
     justify-content: flex-end;
   }
 
   .table-wrap td:nth-child(10) {
     display: flex;
     grid-area: status;
-    align-items: center;
     justify-content: flex-end;
   }
 
   .table-wrap td:nth-child(11) {
     display: flex;
     grid-area: actions;
-    align-items: center;
     justify-content: flex-end;
-  }
-
-  .money-pill,
-  .status {
-    min-width: auto;
-    padding: 4px 7px;
-    font-size: 0.64rem;
-  }
-
-  .row-actions {
-    justify-content: flex-end;
-    gap: 4px;
-    flex-wrap: nowrap;
   }
 
   .row-actions button {
@@ -1577,25 +1334,11 @@ tr:last-child td {
     font-size: 0.62rem;
   }
 
-  /* CALENDÁRIO MOBILE */
-
-  .calendar-page {
-    gap: 12px;
-  }
-
-  .calendar-page-header {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 10px;
-  }
-
-  .calendar-page-header p {
+  .status,
+  .money-pill {
+    min-width: auto;
+    padding: 4px 7px;
     font-size: 0.64rem;
-  }
-
-  .calendar-page-header h1 {
-    font-size: 1.62rem;
-    line-height: 1.05;
   }
 
   .calendar-page-actions {
@@ -1607,65 +1350,25 @@ tr:last-child td {
 
   .calendar-page-actions button {
     width: 100%;
-    min-width: 0;
     height: 36px;
     padding: 0 8px;
-    border-radius: 14px;
     font-size: 0.68rem;
   }
 
-  .calendar-page-actions .primary-button {
-    opacity: 1;
-    color: #fffaf3;
-    background: #2b1f1a;
-    box-shadow: 0 10px 22px rgba(43, 31, 26, 0.16);
-  }
-
   .calendar-chips {
-    display: flex;
-    gap: 6px;
     flex-wrap: nowrap;
     overflow-x: auto;
-    padding-bottom: 2px;
-  }
-
-  .calendar-chips span {
-    flex: 0 0 auto;
-    height: 25px;
-    padding: 0 10px;
-    font-size: 0.66rem;
-  }
-
-  .full-calendar-layout {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 12px;
-  }
-
-  .full-calendar-card {
-    width: 100%;
-    overflow: hidden;
-    border-radius: 20px;
   }
 
   .full-calendar-weekdays,
   .full-calendar-grid {
-    display: grid;
-    grid-template-columns: repeat(7, minmax(0, 1fr));
     min-width: 0;
     width: 100%;
-  }
-
-  .full-calendar-weekdays span {
-    padding: 10px 0;
-    font-size: 0.58rem;
-    letter-spacing: 0.04em;
   }
 
   .full-calendar-day {
     min-height: 62px;
     padding: 6px 4px;
-    overflow: hidden;
   }
 
   .full-calendar-day > strong {
@@ -1673,10 +1376,6 @@ tr:last-child td {
     height: 24px;
     margin: 0 auto 5px;
     font-size: 0.76rem;
-  }
-
-  .full-calendar-day.is-selected {
-    box-shadow: inset 0 0 0 2px #c47a5a;
   }
 
   .calendar-events {
@@ -1693,79 +1392,9 @@ tr:last-child td {
     max-width: 7px;
     padding: 0;
     border-radius: 999px;
-    overflow: hidden;
     color: transparent;
     font-size: 0;
     text-indent: -999px;
-  }
-
-  .more-events {
-    display: grid;
-    place-items: center;
-    width: 16px;
-    height: 12px;
-    border-radius: 999px;
-    background: rgba(43, 31, 26, 0.08);
-    color: #7b6252;
-    font-size: 0.52rem;
-    line-height: 1;
-  }
-
-  .calendar-side-panel {
-    position: static;
-    border-radius: 20px;
-  }
-
-  .calendar-side-header {
-    padding: 14px;
-    align-items: center;
-  }
-
-  .calendar-side-header p {
-    font-size: 0.62rem;
-  }
-
-  .calendar-side-header h2 {
-    font-size: 1.05rem;
-  }
-
-  .calendar-side-header button {
-    height: 32px;
-    padding: 0 10px;
-    border-radius: 999px;
-    font-size: 0.7rem;
-  }
-
-  .calendar-side-content {
-    max-height: none;
-    padding: 14px;
-  }
-
-  .calendar-detail-card {
-    padding: 12px;
-    border-radius: 16px;
-  }
-
-  .calendar-detail-head {
-    gap: 8px;
-  }
-
-  .calendar-detail-card dl div {
-    align-items: flex-start;
-  }
-
-  .calendar-detail-card dt {
-    font-size: 0.64rem;
-  }
-
-  .calendar-detail-card dd {
-    font-size: 0.76rem;
-  }
-
-  .calendar-detail-actions button {
-    padding: 6px 9px;
-    border-radius: 999px;
-    font-size: 0.66rem;
   }
 
   .project-form {

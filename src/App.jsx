@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import "./App.css";
 
 const STORAGE_KEY = "alexandre-dias-gestao-projetos-v1";
 const LOGO_SRC = "/logo-dashboard.png";
@@ -32,7 +33,6 @@ function formatMoneyInput(value) {
     : "";
 
   if (hasComma) return `${integerFormatted},${decimalDigits}`;
-
   return integerFormatted;
 }
 
@@ -174,6 +174,8 @@ function getStatusClass(status) {
 }
 
 function BrandLogo({ compact = false, dashboard = false }) {
+  const width = dashboard ? "320px" : compact ? "180px" : "150px";
+
   return (
     <img
       src={LOGO_SRC}
@@ -181,6 +183,13 @@ function BrandLogo({ compact = false, dashboard = false }) {
       className={`brand-logo ${compact ? "brand-logo-compact" : ""} ${
         dashboard ? "brand-logo-dashboard" : ""
       }`}
+      style={{
+        display: "block",
+        width,
+        maxWidth: "100%",
+        height: "auto",
+        objectFit: "contain",
+      }}
     />
   );
 }
@@ -1004,6 +1013,7 @@ export default function App() {
 
         <div className="sidebar-footer">
           <strong>AD</strong>
+
           <div>
             <strong>Alexandre Dias</strong>
             <span>Arquitetura & Interiores</span>
