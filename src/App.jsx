@@ -610,7 +610,11 @@ function FullCalendarPage({
             Próximo mês →
           </button>
 
-          <button type="button" className="primary-button" onClick={() => onNewProject(selectedDate || todayISO())}>
+          <button
+            type="button"
+            className="primary-button"
+            onClick={() => onNewProject(selectedDate || todayISO())}
+          >
             + Novo projeto
           </button>
         </div>
@@ -665,7 +669,7 @@ function FullCalendarPage({
                           className={`calendar-event calendar-event-${getStatusClass(status)}`}
                           onClick={(event) => {
                             event.stopPropagation();
-                            onEdit(project);
+                            setSelectedDate(date);
                           }}
                         >
                           {project.client || project.development || project.project || "Projeto"}
