@@ -707,10 +707,6 @@ export default function App() {
     };
   }, [monthProjects]);
 
-  const recentProjects = useMemo(() => {
-    return [...monthProjects].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 6);
-  }, [monthProjects]);
-
   function openNewProject() {
     setEditingId(null);
     setForm(emptyProjectForm());
@@ -919,27 +915,6 @@ export default function App() {
                 label="A receber"
                 value={formatCurrency(summary.pending)}
                 helper="Comissão pendente"
-              />
-            </div>
-
-            <div className="panel">
-              <div className="panel-header">
-                <div>
-                  <p>Últimos lançamentos</p>
-                  <h2>Projetos recentes</h2>
-                </div>
-
-                <button type="button" onClick={() => setActivePage("projetos")}>
-                  Ver todos
-                </button>
-              </div>
-
-              <ProjectTable
-                projects={recentProjects}
-                onEdit={openEditProject}
-                onDelete={deleteProject}
-                onMarkReceived={markAsReceived}
-                emptyMessage="Nenhum projeto cadastrado ainda. Clique em “Novo projeto” para começar."
               />
             </div>
           </section>
