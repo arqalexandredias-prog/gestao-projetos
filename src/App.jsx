@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 const STORAGE_KEY = "alexandre-dias-gestao-projetos-v1";
+const LOGO_SRC = "/logo-dashboard.png";
 
 const STATUS_OPTIONS = ["Orçamento", "A receber", "Parcial", "Recebido", "Cancelado"];
 
@@ -11,10 +12,7 @@ function todayISO() {
 }
 
 function createId() {
-  if (globalThis.crypto?.randomUUID) {
-    return globalThis.crypto.randomUUID();
-  }
-
+  if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
@@ -33,9 +31,7 @@ function formatMoneyInput(value) {
     ? new Intl.NumberFormat("pt-BR").format(Number(integerDigits))
     : "";
 
-  if (hasComma) {
-    return `${integerFormatted},${decimalDigits}`;
-  }
+  if (hasComma) return `${integerFormatted},${decimalDigits}`;
 
   return integerFormatted;
 }
@@ -43,9 +39,7 @@ function formatMoneyInput(value) {
 function formatMoneyInputFromNumber(value) {
   const number = Number(value);
 
-  if (!Number.isFinite(number) || number <= 0) {
-    return "";
-  }
+  if (!Number.isFinite(number) || number <= 0) return "";
 
   return new Intl.NumberFormat("pt-BR", {
     minimumFractionDigits: 2,
@@ -179,12 +173,15 @@ function getStatusClass(status) {
   return map[status] || "padrao";
 }
 
-function LogoMark({ compact = false }) {
+function BrandLogo({ compact = false, dashboard = false }) {
   return (
-    <div className={`logo-mark ${compact ? "logo-mark-compact" : ""}`} aria-label="AD">
-      <strong>AD</strong>
-      <i />
-    </div>
+    <img
+      src={LOGO_SRC}
+      alt="Alexandre Dias | Interiores - Gestão de Projetos"
+      className={`brand-logo ${compact ? "brand-logo-compact" : ""} ${
+        dashboard ? "brand-logo-dashboard" : ""
+      }`}
+    />
   );
 }
 
@@ -207,9 +204,7 @@ function SummaryCard({ icon, label, value, helper, tone = "neutral" }) {
 }
 
 function ProjectTable({ projects, onEdit, onDelete, onMarkReceived, emptyMessage }) {
-  if (!projects.length) {
-    return <div className="empty-state">{emptyMessage}</div>;
-  }
+  if (!projects.length) return <div className="empty-state">{emptyMessage}</div>;
 
   return (
     <div className="table-wrap">
@@ -806,10 +801,7 @@ export default function App() {
 
     return monthProjects
       .filter((project) => {
-        if (statusFilter !== "Todos" && getDisplayStatus(project) !== statusFilter) {
-          return false;
-        }
-
+        if (statusFilter !== "Todos" && getDisplayStatus(project) !== statusFilter) return false;
         if (!term) return true;
 
         return [
@@ -978,12 +970,7 @@ export default function App() {
     <main className="app">
       <aside className="sidebar">
         <div className="brand">
-          <LogoMark />
-
-          <div>
-            <strong>Alexandre Dias | Interiores</strong>
-            <span>Gestão de Projetos</span>
-          </div>
+          <BrandLogo />
         </div>
 
         <nav>
@@ -1016,7 +1003,7 @@ export default function App() {
         </nav>
 
         <div className="sidebar-footer">
-          <div className="avatar">AD</div>
+          <strong>AD</strong>
           <div>
             <strong>Alexandre Dias</strong>
             <span>Arquitetura & Interiores</span>
@@ -1027,11 +1014,7 @@ export default function App() {
       <section className="content">
         <header className="topbar">
           <div className="topbar-brand">
-            <LogoMark compact />
-            <div>
-              <strong>Alexandre Dias | Interiores</strong>
-              <span>Gestão de Projetos</span>
-            </div>
+            <BrandLogo compact />
           </div>
 
           <div className="topbar-actions">
@@ -1074,9 +1057,13 @@ export default function App() {
         {activePage === "resumo" ? (
           <section className="page-section">
             <section className="hero welcome-card">
-              <h1>
-                Vamos criar algo incrível, <span>Alexandre?</span>
-              </h1>
+              <div className="dashboard-logo-wrap">
+                <BrandLogo dashboard />
+
+                <h1>
+                  Vamos criar algo incrível, <span>Alexandre?</span>
+                </h1>
+              </div>
             </section>
 
             <section className="summary-grid">
