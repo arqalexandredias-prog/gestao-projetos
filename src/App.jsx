@@ -322,11 +322,23 @@ function normalizeProjectCodes(projects) {
     codeById.set(project.id, formatProjectCode(index + 1));
   });
 
-  return projects.map((project, index) => ({
-    ...project,
-    createdAt: project.createdAt || project.updatedAt || project.date || "",
-    projectCode: codeById.get(project.id) || normalizeProjectCode(project.projectCode) || getProjectCode(index),
-  }));
+  return projects.map((project, index) => {
+    const tasks = normalizeProjectTasks(project.tasks);
+    const taskProgress = getTaskProgress(tasks);
+
+    return {
+      ...project,
+      tasks,
+      taskProgress: taskProgress.percent,
+      tasksTotal: taskProgress.total,
+      tasksDone: taskProgress.done,
+      createdAt: project.createdAt || project.updatedAt || project.date || "",
+      projectCode:
+        codeById.get(project.id) ||
+        normalizeProjectCode(project.projectCode) ||
+        getProjectCode(index),
+    };
+  });
 }
 
 function getNextProjectCode(projects) {
@@ -449,6 +461,105 @@ function emptyPaymentForm() {
     amount: "",
     date: todayISO(),
     note: "",
+  };
+}
+
+const DEFAULT_PROJECT_TASKS = [
+  "Briefing / alinhamento inicial",
+  "Estudo de layout",
+  "Modelagem 3D",
+  "Marcenaria / detalhamento",
+  "Renderização",
+  "Revisões do cliente",
+  "Apresentação final",
+  "Entrega dos arquivos",
+];
+
+function emptyTaskForm() {
+  return {
+    title: "",
+    dueDate: "",
+    priority: "Normal",
+    note: "",
+  };
+}
+
+function normalizeProjectTasks(tasks) {
+  if (!Array.isArray(tasks)) return [];
+
+  return tasks
+    .map((task, index) => ({
+      id: task.id || createId(),
+      title: String(task.title || "").trim(),
+      dueDate: isValidDateString(task.dueDate) ? task.dueDate : "",
+      priority: task.priority || "Normal",
+      note: String(task.note || "").trim(),
+      completed: Boolean(task.completed),
+      position: Number.isFinite(Number(task.position)) ? Number(task.position) : index + 1,
+      createdAt: task.createdAt || new Date().toISOString(),
+      updatedAt: task.updatedAt || task.createdAt || new Date().toISOString(),
+    }))
+    .filter((task) => task.title)
+    .sort((a, b) => {
+      if (a.completed !== b.completed) return a.completed ? 1 : -1;
+      if (a.position !== b.position) return a.position - b.position;
+
+      return String(a.createdAt || "").localeCompare(String(b.createdAt || ""));
+    });
+}
+
+function getProjectTasks(project) {
+  return normalizeProjectTasks(project?.tasks);
+}
+
+function getTaskProgress(tasks) {
+  const normalizedTasks = normalizeProjectTasks(tasks);
+
+  if (!normalizedTasks.length) {
+    return {
+      total: 0,
+      done: 0,
+      percent: 0,
+    };
+  }
+
+  const done = normalizedTasks.filter((task) => task.completed).length;
+
+  return {
+    total: normalizedTasks.length,
+    done,
+    percent: Math.round((done / normalizedTasks.length) * 100),
+  };
+}
+
+function getTaskProgressLabel(project) {
+  const progress = getTaskProgress(getProjectTasks(project));
+
+  if (!progress.total) return "Checklist";
+
+  return `${progress.done}/${progress.total} concluídas · ${progress.percent}%`;
+}
+
+function getTaskPriorityClass(priority) {
+  const normalized = String(priority || "").toLowerCase();
+
+  if (normalized === "alta") return "status-cancelado";
+  if (normalized === "baixa") return "status-recebido";
+
+  return "status-parcial";
+}
+
+function withProjectTasks(project, tasks) {
+  const normalizedTasks = normalizeProjectTasks(tasks);
+  const progress = getTaskProgress(normalizedTasks);
+
+  return {
+    ...project,
+    tasks: normalizedTasks,
+    taskProgress: progress.percent,
+    tasksTotal: progress.total,
+    tasksDone: progress.done,
+    updatedAt: new Date().toISOString(),
   };
 }
 
@@ -711,8 +822,13 @@ function ProjectSectionModal({
   onClose,
   onAddPayment,
   onDeletePayment,
+  onAddTask,
+  onToggleTask,
+  onDeleteTask,
+  onCreateDefaultTasks,
 }) {
   const [paymentForm, setPaymentForm] = useState(emptyPaymentForm);
+  const [taskForm, setTaskForm] = useState(emptyTaskForm);
 
   const title = getProjectTitle(project);
   const client = getProjectClient(project);
@@ -723,6 +839,8 @@ function ProjectSectionModal({
   const progress = commission ? Math.min(Math.round((received / commission) * 100), 100) : 0;
   const payments = getProjectPayments(project);
   const paymentsTotal = getPaymentsTotal(project);
+  const tasks = getProjectTasks(project);
+  const taskProgress = getTaskProgress(tasks);
 
   const titles = {
     pagamentos: "Pagamentos",
@@ -744,6 +862,16 @@ function ProjectSectionModal({
 
     if (saved) {
       setPaymentForm(emptyPaymentForm());
+    }
+  }
+
+  function submitTask(event) {
+    event.preventDefault();
+
+    const saved = onAddTask(project.id, taskForm);
+
+    if (saved) {
+      setTaskForm(emptyTaskForm());
     }
   }
 
@@ -908,9 +1036,133 @@ function ProjectSectionModal({
 
         {type === "tarefas" ? (
           <div className="project-section-popup-body">
-            <div className="project-section-empty">
-              A área de tarefas vai entrar aqui depois, com checklist e progresso do projeto.
+            <div className="project-payment-total">
+              <span>Progresso das tarefas</span>
+              <strong>{taskProgress.percent}%</strong>
             </div>
+
+            <div className="project-detail-progress">
+              <i style={{ width: `${taskProgress.percent}%` }} />
+            </div>
+
+            <p className="project-payment-empty">
+              {taskProgress.done} de {taskProgress.total} tarefas concluídas. Ao marcar uma tarefa,
+              o progresso do projeto é atualizado automaticamente.
+            </p>
+
+            <form className="project-payment-form" onSubmit={submitTask}>
+              <label className="project-payment-form-wide">
+                Nova tarefa
+                <input
+                  type="text"
+                  value={taskForm.title}
+                  placeholder="Ex: Finalizar layout da cozinha"
+                  onChange={(event) =>
+                    setTaskForm((prev) => ({
+                      ...prev,
+                      title: event.target.value,
+                    }))
+                  }
+                />
+              </label>
+
+              <label>
+                Prazo
+                <input
+                  type="date"
+                  value={taskForm.dueDate}
+                  onChange={(event) =>
+                    setTaskForm((prev) => ({
+                      ...prev,
+                      dueDate: event.target.value,
+                    }))
+                  }
+                />
+              </label>
+
+              <label>
+                Prioridade
+                <select
+                  value={taskForm.priority}
+                  onChange={(event) =>
+                    setTaskForm((prev) => ({
+                      ...prev,
+                      priority: event.target.value,
+                    }))
+                  }
+                >
+                  <option value="Baixa">Baixa</option>
+                  <option value="Normal">Normal</option>
+                  <option value="Alta">Alta</option>
+                </select>
+              </label>
+
+              <label className="project-payment-form-wide">
+                Observação
+                <input
+                  type="text"
+                  value={taskForm.note}
+                  placeholder="Ex: aguardar retorno do cliente"
+                  onChange={(event) =>
+                    setTaskForm((prev) => ({
+                      ...prev,
+                      note: event.target.value,
+                    }))
+                  }
+                />
+              </label>
+
+              <button type="submit">Adicionar tarefa</button>
+            </form>
+
+            {!tasks.length ? (
+              <div className="project-section-empty">
+                <p>Nenhuma tarefa cadastrada ainda.</p>
+
+                <button type="button" onClick={() => onCreateDefaultTasks(project.id)}>
+                  Criar checklist padrão
+                </button>
+              </div>
+            ) : (
+              <div className="project-payment-list">
+                {tasks.map((task) => (
+                  <article key={task.id} className="project-payment-item">
+                    <div>
+                      <strong
+                        style={{
+                          textDecoration: task.completed ? "line-through" : "none",
+                          opacity: task.completed ? 0.55 : 1,
+                        }}
+                      >
+                        {task.title}
+                      </strong>
+
+                      <span>{task.dueDate ? formatDate(task.dueDate) : "Sem prazo"}</span>
+
+                      <small>
+                        <StatusBadge status={task.priority || "Normal"} />
+                      </small>
+
+                      {task.note ? <small>{task.note}</small> : null}
+                    </div>
+
+                    <div className="row-actions">
+                      <button type="button" onClick={() => onToggleTask(project.id, task.id)}>
+                        {task.completed ? "Reabrir" : "Concluir"}
+                      </button>
+
+                      <button
+                        type="button"
+                        className="danger"
+                        onClick={() => onDeleteTask(project.id, task.id)}
+                      >
+                        Excluir
+                      </button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
           </div>
         ) : null}
 
@@ -926,7 +1178,17 @@ function ProjectSectionModal({
   );
 }
 
-function ProjectDetailModal({ details, onClose, onEdit, onAddPayment, onDeletePayment }) {
+function ProjectDetailModal({
+  details,
+  onClose,
+  onEdit,
+  onAddPayment,
+  onDeletePayment,
+  onAddTask,
+  onToggleTask,
+  onDeleteTask,
+  onCreateDefaultTasks,
+}) {
   const [hideValues, setHideValues] = useState(false);
   const [activeSection, setActiveSection] = useState(null);
 
@@ -942,6 +1204,7 @@ function ProjectDetailModal({ details, onClose, onEdit, onAddPayment, onDeletePa
   const progress = commission ? Math.min(Math.round((received / commission) * 100), 100) : 0;
   const daysUntil = getDaysUntil(deadline);
   const paymentsTotal = getPaymentsTotal(project);
+  const taskProgress = getTaskProgress(getProjectTasks(project));
 
   function money(value) {
     return hideValues ? "••••••" : formatCurrency(value);
@@ -1094,7 +1357,7 @@ function ProjectDetailModal({ details, onClose, onEdit, onAddPayment, onDeletePa
             <button type="button" onClick={() => setActiveSection("tarefas")}>
               <span>✓</span>
               <strong>Tarefas</strong>
-              <small>Em breve</small>
+              <small>{getTaskProgressLabel(project)}</small>
             </button>
 
             <button type="button" onClick={() => setActiveSection("arquivos")}>
@@ -1132,6 +1395,10 @@ function ProjectDetailModal({ details, onClose, onEdit, onAddPayment, onDeletePa
             onClose={() => setActiveSection(null)}
             onAddPayment={onAddPayment}
             onDeletePayment={onDeletePayment}
+            onAddTask={onAddTask}
+            onToggleTask={onToggleTask}
+            onDeleteTask={onDeleteTask}
+            onCreateDefaultTasks={onCreateDefaultTasks}
           />
         ) : null}
       </section>
@@ -2205,6 +2472,10 @@ export default function App() {
       note: form.note.trim(),
       color: form.color || EVENT_COLORS[0],
       payments: existingProject?.payments || [],
+      tasks: getProjectTasks(existingProject),
+      taskProgress: existingProject?.taskProgress || 0,
+      tasksTotal: existingProject?.tasksTotal || 0,
+      tasksDone: existingProject?.tasksDone || 0,
       createdAt: existingProject?.createdAt || existingProject?.updatedAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -2338,6 +2609,107 @@ export default function App() {
             status: nextStatus,
             updatedAt: new Date().toISOString(),
           };
+        })
+      )
+    );
+  }
+
+
+  function addProjectTask(projectId, taskFormPayload) {
+    const title = String(taskFormPayload.title || "").trim();
+
+    if (!title) {
+      window.alert("Informe o nome da tarefa.");
+      return false;
+    }
+
+    setProjects((current) =>
+      normalizeProjectCodes(
+        current.map((project) => {
+          if (project.id !== projectId) return project;
+
+          const currentTasks = getProjectTasks(project);
+          const newTask = {
+            id: createId(),
+            title,
+            dueDate: isValidDateString(taskFormPayload.dueDate) ? taskFormPayload.dueDate : "",
+            priority: taskFormPayload.priority || "Normal",
+            note: String(taskFormPayload.note || "").trim(),
+            completed: false,
+            position: currentTasks.length + 1,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+
+          return withProjectTasks(project, [...currentTasks, newTask]);
+        })
+      )
+    );
+
+    return true;
+  }
+
+  function toggleProjectTask(projectId, taskId) {
+    setProjects((current) =>
+      normalizeProjectCodes(
+        current.map((project) => {
+          if (project.id !== projectId) return project;
+
+          const nextTasks = getProjectTasks(project).map((task) =>
+            task.id === taskId
+              ? {
+                  ...task,
+                  completed: !task.completed,
+                  updatedAt: new Date().toISOString(),
+                }
+              : task
+          );
+
+          return withProjectTasks(project, nextTasks);
+        })
+      )
+    );
+  }
+
+  function deleteProjectTask(projectId, taskId) {
+    const confirmDelete = window.confirm("Excluir esta tarefa?");
+    if (!confirmDelete) return;
+
+    setProjects((current) =>
+      normalizeProjectCodes(
+        current.map((project) => {
+          if (project.id !== projectId) return project;
+
+          const nextTasks = getProjectTasks(project).filter((task) => task.id !== taskId);
+
+          return withProjectTasks(project, nextTasks);
+        })
+      )
+    );
+  }
+
+  function createDefaultProjectTasks(projectId) {
+    setProjects((current) =>
+      normalizeProjectCodes(
+        current.map((project) => {
+          if (project.id !== projectId) return project;
+
+          const currentTasks = getProjectTasks(project);
+          if (currentTasks.length) return project;
+
+          const defaultTasks = DEFAULT_PROJECT_TASKS.map((title, index) => ({
+            id: createId(),
+            title,
+            dueDate: "",
+            priority: index <= 2 ? "Alta" : "Normal",
+            note: "",
+            completed: false,
+            position: index + 1,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          }));
+
+          return withProjectTasks(project, defaultTasks);
         })
       )
     );
@@ -2736,6 +3108,10 @@ export default function App() {
           onEdit={editProjectFromDetails}
           onAddPayment={addProjectPayment}
           onDeletePayment={deleteProjectPayment}
+          onAddTask={addProjectTask}
+          onToggleTask={toggleProjectTask}
+          onDeleteTask={deleteProjectTask}
+          onCreateDefaultTasks={createDefaultProjectTasks}
         />
       ) : null}
     </main>
