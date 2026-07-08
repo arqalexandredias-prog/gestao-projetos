@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import "./App.css";
 
 const STORAGE_KEY = "alexandre-dias-gestao-projetos-v1";
+const PROJECT_CODE_ORDER_RULE = "CODIGOS_POR_DATA_DO_PROJETO_V1";
 const PAGE_STORAGE_KEY = "alexandre-dias-gestao-projetos-pagina-atual";
 const CALENDAR_EVENTS_STORAGE_KEY = "alexandre-dias-gestao-projetos-eventos-calendario-v2";
 const CALENDAR_VIEW_STORAGE_KEY = "alexandre-dias-gestao-projetos-calendario-view";
@@ -299,17 +300,25 @@ function getProjectCodeNumber(value) {
   return match ? Number(match[1]) : 0;
 }
 
+function getProjectSortDate(project) {
+  return project.date || project.deliveryDate || project.createdAt || project.updatedAt || "";
+}
+
 function getProjectOrderValue(project) {
   return [
-    project.date || "",
-    project.deliveryDate || "",
+    getProjectSortDate(project) || "9999-12-31",
     project.createdAt || project.updatedAt || "",
     project.id || "",
   ].join("|");
 }
 
 function normalizeProjectCodes(projects) {
-  const ordered = [...projects].sort((a, b) => {
+  const projectsWithStableDates = projects.map((project) => ({
+    ...project,
+    createdAt: project.createdAt || project.updatedAt || project.date || "",
+  }));
+
+  const ordered = [...projectsWithStableDates].sort((a, b) => {
     const orderA = getProjectOrderValue(a);
     const orderB = getProjectOrderValue(b);
 
@@ -322,7 +331,7 @@ function normalizeProjectCodes(projects) {
     codeById.set(project.id, formatProjectCode(index + 1));
   });
 
-  return projects.map((project, index) => {
+  return projectsWithStableDates.map((project, index) => {
     const tasks = normalizeProjectTasks(project.tasks);
     const taskProgress = getTaskProgress(tasks);
     const schedule = normalizeProjectSchedule(project.schedule);
@@ -350,37 +359,48 @@ function normalizeProjectCodes(projects) {
       diaryTotal: diarySummary.totalItems,
       diaryPinnedTotal: diarySummary.pinnedCount,
       diaryLastDate: diarySummary.lastDate,
-      createdAt: project.createdAt || project.updatedAt || project.date || "",
-      projectCode:
-        codeById.get(project.id) ||
-        normalizeProjectCode(project.projectCode) ||
-        getProjectCode(index),
+      projectCode: codeById.get(project.id) || getProjectCode(index),
     };
   });
 }
 
 function getNextProjectCode(projects) {
-  const normalizedProjects = normalizeProjectCodes(projects);
-  const maxNumber = normalizedProjects.reduce((max, project) => {
-    return Math.max(max, getProjectCodeNumber(project.projectCode));
-  }, 0);
+  return formatProjectCode(projects.length + 1);
+}
 
-  return formatProjectCode(maxNumber + 1);
+function getProjectCodeForDate(projects, projectDate, editingId) {
+  const now = new Date().toISOString();
+  const temporaryId = editingId || "__new_project__";
+
+  const projectsToOrder = editingId
+    ? projects.map((project) =>
+        project.id === editingId
+          ? {
+              ...project,
+              date: projectDate || project.date || todayISO(),
+              updatedAt: now,
+            }
+          : project
+      )
+    : [
+        ...projects,
+        {
+          id: temporaryId,
+          date: projectDate || todayISO(),
+          createdAt: now,
+          updatedAt: now,
+        },
+      ];
+
+  const normalized = normalizeProjectCodes(projectsToOrder);
+  const target = normalized.find((project) => project.id === temporaryId);
+
+  return target?.projectCode || getNextProjectCode(projects);
 }
 
 function getUniqueProjectCode(projects, requestedCode, editingId) {
-  const normalizedRequested = normalizeProjectCode(requestedCode);
-  const fallbackCode = getNextProjectCode(projects);
-  const code = normalizedRequested || fallbackCode;
-
-  const alreadyExists = projects.some((project) => {
-    if (project.id === editingId) return false;
-    return normalizeProjectCode(project.projectCode) === code;
-  });
-
-  if (!alreadyExists) return code;
-
-  return fallbackCode;
+  const existingProject = projects.find((project) => project.id === editingId);
+  return getProjectCodeForDate(projects, existingProject?.date || todayISO(), editingId);
 }
 
 function getProjectDeadline(project) {
@@ -2661,7 +2681,7 @@ function ProjectDetailModal({
   );
 }
 
-function ProjectFormModal({ form, setForm, editingId, onClose, onSubmit }) {
+function ProjectFormModal({ form, setForm, editingId, projects, onClose, onSubmit }) {
   const commission = parseMoney(form.amount) * (parsePercent(form.commissionPercent) / 100);
 
   let receivedPreview = parseMoney(form.receivedAmount);
@@ -2727,10 +2747,11 @@ function ProjectFormModal({ form, setForm, editingId, onClose, onSubmit }) {
               type="text"
               value={form.projectCode}
               placeholder="Ex: P-001"
-              onChange={(event) =>
-                setForm((prev) => ({ ...prev, projectCode: event.target.value }))
-              }
+              readOnly
             />
+            <small style={{ display: "block", marginTop: 6, color: "var(--text-soft)", lineHeight: 1.35 }}>
+              Código automático pela data do projeto. O projeto mais antigo sempre vira P-001.
+            </small>
           </label>
 
           <label>
@@ -2738,7 +2759,15 @@ function ProjectFormModal({ form, setForm, editingId, onClose, onSubmit }) {
             <input
               type="date"
               value={form.date}
-              onChange={(event) => setForm((prev) => ({ ...prev, date: event.target.value }))}
+              onChange={(event) =>
+                setForm((prev) => ({
+                  ...prev,
+                  date: event.target.value,
+                  projectCode: editingId
+                    ? prev.projectCode
+                    : getProjectCodeForDate(projects, event.target.value, null),
+                }))
+              }
               required
             />
           </label>
@@ -4098,7 +4127,7 @@ export default function App() {
 
   function openNewProject(date = todayISO()) {
     setEditingId(null);
-    setForm(emptyProjectForm(date, getNextProjectCode(projects)));
+    setForm(emptyProjectForm(date, getProjectCodeForDate(projects, date, null)));
     setIsFormOpen(true);
   }
 
@@ -4171,7 +4200,7 @@ export default function App() {
 
     const payload = {
       id: editingId || createId(),
-      projectCode: getUniqueProjectCode(projects, form.projectCode, editingId),
+      projectCode: getProjectCodeForDate(projects, form.date, editingId),
       date: form.date,
       deliveryDate: form.deliveryDate,
       development: form.development.trim(),
@@ -5333,6 +5362,7 @@ export default function App() {
           form={form}
           setForm={setForm}
           editingId={editingId}
+          projects={projects}
           onClose={closeForm}
           onSubmit={saveProject}
         />
