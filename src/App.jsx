@@ -325,6 +325,8 @@ function normalizeProjectCodes(projects) {
   return projects.map((project, index) => {
     const tasks = normalizeProjectTasks(project.tasks);
     const taskProgress = getTaskProgress(tasks);
+    const schedule = normalizeProjectSchedule(project.schedule);
+    const scheduleProgress = getScheduleProgress(schedule);
 
     return {
       ...project,
@@ -332,6 +334,10 @@ function normalizeProjectCodes(projects) {
       taskProgress: taskProgress.percent,
       tasksTotal: taskProgress.total,
       tasksDone: taskProgress.done,
+      schedule,
+      scheduleProgress: scheduleProgress.percent,
+      scheduleTotal: scheduleProgress.total,
+      scheduleDone: scheduleProgress.done,
       createdAt: project.createdAt || project.updatedAt || project.date || "",
       projectCode:
         codeById.get(project.id) ||
@@ -559,6 +565,125 @@ function withProjectTasks(project, tasks) {
     taskProgress: progress.percent,
     tasksTotal: progress.total,
     tasksDone: progress.done,
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+const DEFAULT_PROJECT_SCHEDULE = [
+  { title: "Briefing / alinhamento inicial", offset: 0 },
+  { title: "Estudo de layout", offset: 2 },
+  { title: "Modelagem 3D", offset: 5 },
+  { title: "Revisão com cliente", offset: 8 },
+  { title: "Renderização", offset: 10 },
+  { title: "Ajustes finais", offset: 12 },
+  { title: "Entrega final", offset: 14, useDeliveryDate: true },
+];
+
+const SCHEDULE_STATUS_OPTIONS = ["Pendente", "Em andamento", "Concluído"];
+
+function emptyScheduleForm() {
+  return {
+    title: "",
+    date: "",
+    status: "Pendente",
+    note: "",
+  };
+}
+
+function normalizeScheduleStatus(status) {
+  return SCHEDULE_STATUS_OPTIONS.includes(status) ? status : "Pendente";
+}
+
+function normalizeProjectSchedule(schedule) {
+  if (!Array.isArray(schedule)) return [];
+
+  return schedule
+    .map((item, index) => ({
+      id: item.id || createId(),
+      title: String(item.title || "").trim(),
+      date: isValidDateString(item.date) ? item.date : "",
+      status: normalizeScheduleStatus(item.status),
+      note: String(item.note || "").trim(),
+      position: Number.isFinite(Number(item.position)) ? Number(item.position) : index + 1,
+      createdAt: item.createdAt || new Date().toISOString(),
+      updatedAt: item.updatedAt || item.createdAt || new Date().toISOString(),
+    }))
+    .filter((item) => item.title)
+    .sort((a, b) => {
+      if (a.date && b.date && a.date !== b.date) return a.date.localeCompare(b.date);
+      if (a.date && !b.date) return -1;
+      if (!a.date && b.date) return 1;
+      if (a.position !== b.position) return a.position - b.position;
+
+      return String(a.createdAt || "").localeCompare(String(b.createdAt || ""));
+    });
+}
+
+function getProjectSchedule(project) {
+  return normalizeProjectSchedule(project?.schedule);
+}
+
+function getScheduleProgress(schedule) {
+  const normalizedSchedule = normalizeProjectSchedule(schedule);
+
+  if (!normalizedSchedule.length) {
+    return {
+      total: 0,
+      done: 0,
+      percent: 0,
+    };
+  }
+
+  const done = normalizedSchedule.filter((item) => item.status === "Concluído").length;
+
+  return {
+    total: normalizedSchedule.length,
+    done,
+    percent: Math.round((done / normalizedSchedule.length) * 100),
+  };
+}
+
+function getScheduleProgressLabel(project) {
+  const progress = getScheduleProgress(getProjectSchedule(project));
+
+  if (!progress.total) return "Criar etapas";
+
+  return `${progress.done}/${progress.total} etapas · ${progress.percent}%`;
+}
+
+function getScheduleStatusClass(status) {
+  if (status === "Concluído") return "status-recebido";
+  if (status === "Em andamento") return "status-parcial";
+
+  return "status-a-receber";
+}
+
+function getNextScheduleStatus(status) {
+  if (status === "Pendente") return "Em andamento";
+  if (status === "Em andamento") return "Concluído";
+
+  return "Pendente";
+}
+
+function getDefaultScheduleDate(project, item, index) {
+  if (item.useDeliveryDate && isValidDateString(project?.deliveryDate)) {
+    return project.deliveryDate;
+  }
+
+  const baseDate = isValidDateString(project?.date) ? parseISODate(project.date) : parseISODate(todayISO());
+  return toISODate(addDays(baseDate, Number.isFinite(Number(item.offset)) ? Number(item.offset) : index * 2));
+}
+
+function withProjectSchedule(project, schedule) {
+  const normalizedSchedule = normalizeProjectSchedule(schedule);
+  const progress = getScheduleProgress(normalizedSchedule);
+
+  return {
+    ...project,
+    schedule: normalizedSchedule,
+    scheduleProgress: progress.percent,
+    scheduleTotal: progress.total,
+    scheduleDone: progress.done,
     updatedAt: new Date().toISOString(),
   };
 }
@@ -826,9 +951,14 @@ function ProjectSectionModal({
   onToggleTask,
   onDeleteTask,
   onCreateDefaultTasks,
+  onAddScheduleItem,
+  onUpdateScheduleItemStatus,
+  onDeleteScheduleItem,
+  onCreateDefaultSchedule,
 }) {
   const [paymentForm, setPaymentForm] = useState(emptyPaymentForm);
   const [taskForm, setTaskForm] = useState(emptyTaskForm);
+  const [scheduleForm, setScheduleForm] = useState(emptyScheduleForm);
 
   const title = getProjectTitle(project);
   const client = getProjectClient(project);
@@ -841,6 +971,8 @@ function ProjectSectionModal({
   const paymentsTotal = getPaymentsTotal(project);
   const tasks = getProjectTasks(project);
   const taskProgress = getTaskProgress(tasks);
+  const schedule = getProjectSchedule(project);
+  const scheduleProgress = getScheduleProgress(schedule);
 
   const titles = {
     pagamentos: "Pagamentos",
@@ -872,6 +1004,16 @@ function ProjectSectionModal({
 
     if (saved) {
       setTaskForm(emptyTaskForm());
+    }
+  }
+
+  function submitSchedule(event) {
+    event.preventDefault();
+
+    const saved = onAddScheduleItem(project.id, scheduleForm);
+
+    if (saved) {
+      setScheduleForm(emptyScheduleForm());
     }
   }
 
@@ -990,6 +1132,147 @@ function ProjectSectionModal({
                 <strong>{deadline ? formatDaysUntil(deadline) : "Sem data"}</strong>
               </div>
             </div>
+
+            <div className="project-payment-total">
+              <span>Progresso do cronograma</span>
+              <strong>{scheduleProgress.percent}%</strong>
+            </div>
+
+            <div className="project-detail-progress">
+              <i style={{ width: `${scheduleProgress.percent}%` }} />
+            </div>
+
+            <p className="project-payment-empty">
+              {scheduleProgress.done} de {scheduleProgress.total} etapas concluídas. As etapas com
+              data aparecem automaticamente no calendário como Cronograma.
+            </p>
+
+            <form className="project-payment-form" onSubmit={submitSchedule}>
+              <label className="project-payment-form-wide">
+                Nova etapa
+                <input
+                  type="text"
+                  value={scheduleForm.title}
+                  placeholder="Ex: Revisão com cliente"
+                  onChange={(event) =>
+                    setScheduleForm((prev) => ({
+                      ...prev,
+                      title: event.target.value,
+                    }))
+                  }
+                />
+              </label>
+
+              <label>
+                Data
+                <input
+                  type="date"
+                  value={scheduleForm.date}
+                  onChange={(event) =>
+                    setScheduleForm((prev) => ({
+                      ...prev,
+                      date: event.target.value,
+                    }))
+                  }
+                />
+              </label>
+
+              <label>
+                Status
+                <select
+                  value={scheduleForm.status}
+                  onChange={(event) =>
+                    setScheduleForm((prev) => ({
+                      ...prev,
+                      status: event.target.value,
+                    }))
+                  }
+                >
+                  {SCHEDULE_STATUS_OPTIONS.map((statusOption) => (
+                    <option key={statusOption} value={statusOption}>
+                      {statusOption}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="project-payment-form-wide">
+                Observação
+                <input
+                  type="text"
+                  value={scheduleForm.note}
+                  placeholder="Ex: aguardar aprovação antes de renderizar"
+                  onChange={(event) =>
+                    setScheduleForm((prev) => ({
+                      ...prev,
+                      note: event.target.value,
+                    }))
+                  }
+                />
+              </label>
+
+              <button type="submit">Adicionar etapa</button>
+            </form>
+
+            {!schedule.length ? (
+              <div className="project-section-empty">
+                <p>Nenhuma etapa cadastrada ainda.</p>
+
+                <button type="button" onClick={() => onCreateDefaultSchedule(project.id)}>
+                  Criar cronograma padrão
+                </button>
+              </div>
+            ) : (
+              <div className="project-payment-list">
+                {schedule.map((item) => (
+                  <article key={item.id} className="project-payment-item">
+                    <div>
+                      <strong
+                        style={{
+                          textDecoration: item.status === "Concluído" ? "line-through" : "none",
+                          opacity: item.status === "Concluído" ? 0.62 : 1,
+                        }}
+                      >
+                        {item.title}
+                      </strong>
+
+                      <span>{item.date ? formatDate(item.date) : "Sem data"}</span>
+
+                      <small>
+                        <span className={`status ${getScheduleStatusClass(item.status)}`}>
+                          {item.status}
+                        </span>
+                      </small>
+
+                      {item.note ? <small>{item.note}</small> : null}
+                    </div>
+
+                    <div className="row-actions">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          onUpdateScheduleItemStatus(
+                            project.id,
+                            item.id,
+                            getNextScheduleStatus(item.status)
+                          )
+                        }
+                      >
+                        {item.status === "Concluído" ? "Reabrir" : "Avançar"}
+                      </button>
+
+                      <button
+                        type="button"
+                        className="danger"
+                        onClick={() => onDeleteScheduleItem(project.id, item.id)}
+                      >
+                        Excluir
+                      </button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
           </div>
         ) : null}
 
@@ -1188,6 +1471,10 @@ function ProjectDetailModal({
   onToggleTask,
   onDeleteTask,
   onCreateDefaultTasks,
+  onAddScheduleItem,
+  onUpdateScheduleItemStatus,
+  onDeleteScheduleItem,
+  onCreateDefaultSchedule,
 }) {
   const [hideValues, setHideValues] = useState(false);
   const [activeSection, setActiveSection] = useState(null);
@@ -1205,6 +1492,7 @@ function ProjectDetailModal({
   const daysUntil = getDaysUntil(deadline);
   const paymentsTotal = getPaymentsTotal(project);
   const taskProgress = getTaskProgress(getProjectTasks(project));
+  const scheduleProgress = getScheduleProgress(getProjectSchedule(project));
 
   function money(value) {
     return hideValues ? "••••••" : formatCurrency(value);
@@ -1351,7 +1639,9 @@ function ProjectDetailModal({
             <button type="button" onClick={() => setActiveSection("cronograma")}>
               <span>📅</span>
               <strong>Cronograma</strong>
-              <small>{deadline ? formatDate(deadline) : "Sem data"}</small>
+              <small>
+                {scheduleProgress.total ? getScheduleProgressLabel(project) : deadline ? formatDate(deadline) : "Criar etapas"}
+              </small>
             </button>
 
             <button type="button" onClick={() => setActiveSection("tarefas")}>
@@ -1399,6 +1689,10 @@ function ProjectDetailModal({
             onToggleTask={onToggleTask}
             onDeleteTask={onDeleteTask}
             onCreateDefaultTasks={onCreateDefaultTasks}
+            onAddScheduleItem={onAddScheduleItem}
+            onUpdateScheduleItemStatus={onUpdateScheduleItemStatus}
+            onDeleteScheduleItem={onDeleteScheduleItem}
+            onCreateDefaultSchedule={onCreateDefaultSchedule}
           />
         ) : null}
       </section>
@@ -1893,6 +2187,19 @@ function CalendarPage({
       const title = getProjectTitle(project);
       const client = getProjectClient(project);
       const deadline = getProjectDeadline(project);
+      const scheduleEvents = getProjectSchedule(project)
+        .filter((item) => isValidDateString(item.date))
+        .map((item) => ({
+          id: `project-schedule-${project.id}-${item.id}`,
+          kind: "project",
+          tag: "Cronograma",
+          title: item.title,
+          subtitle: `${client} · ${item.status}`,
+          description: item.note || `Etapa do cronograma do projeto ${title}.`,
+          date: item.date,
+          color: project.color || EVENT_COLORS[4],
+          project,
+        }));
 
       const projectEvent = {
         id: `project-${project.id}`,
@@ -1907,7 +2214,7 @@ function CalendarPage({
       };
 
       if (!deadline || deadline === project.date) {
-        return [projectEvent];
+        return [projectEvent, ...scheduleEvents];
       }
 
       const deadlineEvent = {
@@ -1922,7 +2229,7 @@ function CalendarPage({
         project,
       };
 
-      return [projectEvent, deadlineEvent];
+      return [projectEvent, deadlineEvent, ...scheduleEvents];
     });
   }, [projects]);
 
@@ -2476,6 +2783,10 @@ export default function App() {
       taskProgress: existingProject?.taskProgress || 0,
       tasksTotal: existingProject?.tasksTotal || 0,
       tasksDone: existingProject?.tasksDone || 0,
+      schedule: getProjectSchedule(existingProject),
+      scheduleProgress: existingProject?.scheduleProgress || 0,
+      scheduleTotal: existingProject?.scheduleTotal || 0,
+      scheduleDone: existingProject?.scheduleDone || 0,
       createdAt: existingProject?.createdAt || existingProject?.updatedAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -2710,6 +3021,104 @@ export default function App() {
           }));
 
           return withProjectTasks(project, defaultTasks);
+        })
+      )
+    );
+  }
+
+  function addProjectScheduleItem(projectId, scheduleFormPayload) {
+    const title = String(scheduleFormPayload.title || "").trim();
+
+    if (!title) {
+      window.alert("Informe o nome da etapa.");
+      return false;
+    }
+
+    setProjects((current) =>
+      normalizeProjectCodes(
+        current.map((project) => {
+          if (project.id !== projectId) return project;
+
+          const currentSchedule = getProjectSchedule(project);
+          const newScheduleItem = {
+            id: createId(),
+            title,
+            date: isValidDateString(scheduleFormPayload.date) ? scheduleFormPayload.date : "",
+            status: normalizeScheduleStatus(scheduleFormPayload.status),
+            note: String(scheduleFormPayload.note || "").trim(),
+            position: currentSchedule.length + 1,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+
+          return withProjectSchedule(project, [...currentSchedule, newScheduleItem]);
+        })
+      )
+    );
+
+    return true;
+  }
+
+  function updateProjectScheduleStatus(projectId, scheduleItemId, nextStatus) {
+    setProjects((current) =>
+      normalizeProjectCodes(
+        current.map((project) => {
+          if (project.id !== projectId) return project;
+
+          const nextSchedule = getProjectSchedule(project).map((item) =>
+            item.id === scheduleItemId
+              ? {
+                  ...item,
+                  status: normalizeScheduleStatus(nextStatus),
+                  updatedAt: new Date().toISOString(),
+                }
+              : item
+          );
+
+          return withProjectSchedule(project, nextSchedule);
+        })
+      )
+    );
+  }
+
+  function deleteProjectScheduleItem(projectId, scheduleItemId) {
+    const confirmDelete = window.confirm("Excluir esta etapa do cronograma?");
+    if (!confirmDelete) return;
+
+    setProjects((current) =>
+      normalizeProjectCodes(
+        current.map((project) => {
+          if (project.id !== projectId) return project;
+
+          const nextSchedule = getProjectSchedule(project).filter((item) => item.id !== scheduleItemId);
+
+          return withProjectSchedule(project, nextSchedule);
+        })
+      )
+    );
+  }
+
+  function createDefaultProjectSchedule(projectId) {
+    setProjects((current) =>
+      normalizeProjectCodes(
+        current.map((project) => {
+          if (project.id !== projectId) return project;
+
+          const currentSchedule = getProjectSchedule(project);
+          if (currentSchedule.length) return project;
+
+          const defaultSchedule = DEFAULT_PROJECT_SCHEDULE.map((item, index) => ({
+            id: createId(),
+            title: item.title,
+            date: getDefaultScheduleDate(project, item, index),
+            status: "Pendente",
+            note: "",
+            position: index + 1,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          }));
+
+          return withProjectSchedule(project, defaultSchedule);
         })
       )
     );
@@ -3112,6 +3521,10 @@ export default function App() {
           onToggleTask={toggleProjectTask}
           onDeleteTask={deleteProjectTask}
           onCreateDefaultTasks={createDefaultProjectTasks}
+          onAddScheduleItem={addProjectScheduleItem}
+          onUpdateScheduleItemStatus={updateProjectScheduleStatus}
+          onDeleteScheduleItem={deleteProjectScheduleItem}
+          onCreateDefaultSchedule={createDefaultProjectSchedule}
         />
       ) : null}
     </main>
