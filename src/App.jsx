@@ -4898,19 +4898,19 @@ export default function App() {
             <section
               className="hero hero-small"
               style={{
-                padding: "22px 26px",
-                gap: 14,
-                marginBottom: 14,
+                padding: "10px 26px 12px",
+                gap: 10,
+                marginBottom: 10,
+                minHeight: "auto",
               }}
             >
               <div>
-                <p style={{ marginBottom: 8 }}>Controle</p>
-                <h1 style={{ fontSize: "clamp(1.8rem, 8vw, 2.55rem)", lineHeight: 0.96 }}>
+                <p style={{ marginBottom: 5, fontSize: "0.68rem", letterSpacing: "0.18em" }}>
+                  Controle
+                </p>
+                <h1 style={{ fontSize: "clamp(1.55rem, 6vw, 2rem)", lineHeight: 0.96 }}>
                   Projetos
                 </h1>
-                <small style={{ fontSize: "0.92rem", lineHeight: 1.28 }}>
-                  Lista premium para acompanhar clientes, comissões e recebimentos.
-                </small>
               </div>
 
               <button
@@ -4919,14 +4919,14 @@ export default function App() {
                 onClick={() => openNewProject()}
                 style={{
                   width: "fit-content",
-                  minWidth: 152,
-                  minHeight: 42,
-                  padding: "0 18px",
-                  borderRadius: 18,
-                  fontSize: "0.84rem",
+                  minWidth: 122,
+                  minHeight: 34,
+                  padding: "0 14px",
+                  borderRadius: 14,
+                  fontSize: "0.72rem",
                   letterSpacing: "-0.02em",
                   alignSelf: "flex-start",
-                  boxShadow: "0 16px 32px rgba(45, 29, 23, 0.18)",
+                  boxShadow: "0 10px 20px rgba(45, 29, 23, 0.14)",
                 }}
               >
                 + Novo projeto
