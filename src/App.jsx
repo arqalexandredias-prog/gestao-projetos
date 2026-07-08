@@ -303,7 +303,7 @@ function getProjectOrderValue(project) {
   return [
     project.date || "",
     project.deliveryDate || "",
-    project.updatedAt || "",
+    project.createdAt || project.updatedAt || "",
     project.id || "",
   ].join("|");
 }
@@ -324,6 +324,7 @@ function normalizeProjectCodes(projects) {
 
   return projects.map((project, index) => ({
     ...project,
+    createdAt: project.createdAt || project.updatedAt || project.date || "",
     projectCode: codeById.get(project.id) || normalizeProjectCode(project.projectCode) || getProjectCode(index),
   }));
 }
@@ -703,12 +704,16 @@ function ProjectMobileList({ projects, emptyMessage, onOpenDetails }) {
   );
 }
 
-function ProjectDetailModal({ details, onClose, onEdit, onAddPayment, onDeletePayment }) {
-  const [hideValues, setHideValues] = useState(false);
+function ProjectSectionModal({
+  type,
+  project,
+  hideValues,
+  onClose,
+  onAddPayment,
+  onDeletePayment,
+}) {
   const [paymentForm, setPaymentForm] = useState(emptyPaymentForm);
-  const { project, code } = details;
 
-  const status = getDisplayStatus(project);
   const title = getProjectTitle(project);
   const client = getProjectClient(project);
   const deadline = getProjectDeadline(project);
@@ -716,9 +721,17 @@ function ProjectDetailModal({ details, onClose, onEdit, onAddPayment, onDeletePa
   const received = getReceivedCommission(project);
   const pending = getPendingCommission(project);
   const progress = commission ? Math.min(Math.round((received / commission) * 100), 100) : 0;
-  const daysUntil = getDaysUntil(deadline);
   const payments = getProjectPayments(project);
   const paymentsTotal = getPaymentsTotal(project);
+
+  const titles = {
+    pagamentos: "Pagamentos",
+    cronograma: "Cronograma",
+    tarefas: "Tarefas",
+    arquivos: "Arquivos",
+    orcamentos: "Orçamentos",
+    diario: "Diário",
+  };
 
   function money(value) {
     return hideValues ? "••••••" : formatCurrency(value);
@@ -732,6 +745,206 @@ function ProjectDetailModal({ details, onClose, onEdit, onAddPayment, onDeletePa
     if (saved) {
       setPaymentForm(emptyPaymentForm());
     }
+  }
+
+  return (
+    <div className="project-section-popup-backdrop" onClick={onClose}>
+      <section className="project-section-popup" onClick={(event) => event.stopPropagation()}>
+        <div className="project-section-popup-header">
+          <div>
+            <p>{client}</p>
+            <h3>{titles[type] || "Seção do projeto"}</h3>
+          </div>
+
+          <button type="button" onClick={onClose}>
+            ×
+          </button>
+        </div>
+
+        {type === "pagamentos" ? (
+          <div className="project-section-popup-body">
+            <form className="project-payment-form" onSubmit={submitPayment}>
+              <label>
+                Valor recebido
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={paymentForm.amount}
+                  placeholder="Ex: 1.500,00"
+                  onChange={(event) =>
+                    setPaymentForm((prev) => ({
+                      ...prev,
+                      amount: formatMoneyInput(event.target.value),
+                    }))
+                  }
+                />
+              </label>
+
+              <label>
+                Data
+                <input
+                  type="date"
+                  value={paymentForm.date}
+                  onChange={(event) =>
+                    setPaymentForm((prev) => ({
+                      ...prev,
+                      date: event.target.value,
+                    }))
+                  }
+                />
+              </label>
+
+              <label className="project-payment-form-wide">
+                Observação
+                <input
+                  type="text"
+                  value={paymentForm.note}
+                  placeholder="Ex: primeira parcela / sinal / repasse"
+                  onChange={(event) =>
+                    setPaymentForm((prev) => ({
+                      ...prev,
+                      note: event.target.value,
+                    }))
+                  }
+                />
+              </label>
+
+              <button type="submit">Registrar pagamento</button>
+            </form>
+
+            <div className="project-payment-total">
+              <span>Total registrado</span>
+              <strong>{money(paymentsTotal)}</strong>
+            </div>
+
+            {payments.length ? (
+              <div className="project-payment-list">
+                {payments.map((payment) => (
+                  <article key={payment.id} className="project-payment-item">
+                    <div>
+                      <strong>{money(payment.amount)}</strong>
+                      <span>{formatDate(payment.date)}</span>
+                      {payment.note ? <small>{payment.note}</small> : null}
+                    </div>
+
+                    <button type="button" onClick={() => onDeletePayment(project.id, payment.id)}>
+                      Excluir
+                    </button>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <p className="project-payment-empty">Nenhum pagamento registrado ainda.</p>
+            )}
+          </div>
+        ) : null}
+
+        {type === "cronograma" ? (
+          <div className="project-section-popup-body">
+            <div className="project-section-info-list">
+              <div>
+                <span>Projeto</span>
+                <strong>{title}</strong>
+              </div>
+
+              <div>
+                <span>Data do projeto</span>
+                <strong>{project.date ? formatDate(project.date) : "Sem data"}</strong>
+              </div>
+
+              <div>
+                <span>Prazo de entrega</span>
+                <strong>{deadline ? formatDate(deadline) : "Sem prazo"}</strong>
+              </div>
+
+              <div>
+                <span>Status do prazo</span>
+                <strong>{deadline ? formatDaysUntil(deadline) : "Sem data"}</strong>
+              </div>
+            </div>
+          </div>
+        ) : null}
+
+        {type === "orcamentos" ? (
+          <div className="project-section-popup-body">
+            <div className="project-section-info-list">
+              <div>
+                <span>Total vendido</span>
+                <strong>{money(project.amount)}</strong>
+              </div>
+
+              <div>
+                <span>Comissão</span>
+                <strong>{money(commission)}</strong>
+              </div>
+
+              <div>
+                <span>Recebido</span>
+                <strong>{money(received)}</strong>
+              </div>
+
+              <div>
+                <span>A receber</span>
+                <strong>{money(pending)}</strong>
+              </div>
+
+              <div>
+                <span>Progresso</span>
+                <strong>{progress}% pago</strong>
+              </div>
+            </div>
+          </div>
+        ) : null}
+
+        {type === "diario" ? (
+          <div className="project-section-popup-body">
+            {project.note ? (
+              <p className="project-section-text">{project.note}</p>
+            ) : (
+              <div className="project-section-empty">Nenhum registro no diário ainda.</div>
+            )}
+          </div>
+        ) : null}
+
+        {type === "tarefas" ? (
+          <div className="project-section-popup-body">
+            <div className="project-section-empty">
+              A área de tarefas vai entrar aqui depois, com checklist e progresso do projeto.
+            </div>
+          </div>
+        ) : null}
+
+        {type === "arquivos" ? (
+          <div className="project-section-popup-body">
+            <div className="project-section-empty">
+              A área de arquivos vai entrar aqui depois, para guardar links, referências e documentos.
+            </div>
+          </div>
+        ) : null}
+      </section>
+    </div>
+  );
+}
+
+function ProjectDetailModal({ details, onClose, onEdit, onAddPayment, onDeletePayment }) {
+  const [hideValues, setHideValues] = useState(false);
+  const [activeSection, setActiveSection] = useState(null);
+
+  const { project, code } = details;
+
+  const status = getDisplayStatus(project);
+  const title = getProjectTitle(project);
+  const client = getProjectClient(project);
+  const deadline = getProjectDeadline(project);
+  const commission = getCommission(project);
+  const received = getReceivedCommission(project);
+  const pending = getPendingCommission(project);
+  const progress = commission ? Math.min(Math.round((received / commission) * 100), 100) : 0;
+  const daysUntil = getDaysUntil(deadline);
+  const paymentsTotal = getPaymentsTotal(project);
+
+  function money(value) {
+    return hideValues ? "••••••" : formatCurrency(value);
   }
 
   return (
@@ -863,123 +1076,40 @@ function ProjectDetailModal({ details, onClose, onEdit, onAddPayment, onDeletePa
         </div>
 
         <div className="project-detail-section">
-          <div className="project-detail-section-title-row">
-            <h3>Pagamentos</h3>
-            <span>{payments.length} registro(s)</span>
-          </div>
-
-          <form className="project-payment-form" onSubmit={submitPayment}>
-            <label>
-              Valor recebido
-              <input
-                type="text"
-                inputMode="decimal"
-                value={paymentForm.amount}
-                placeholder="Ex: 1.500,00"
-                onChange={(event) =>
-                  setPaymentForm((prev) => ({
-                    ...prev,
-                    amount: formatMoneyInput(event.target.value),
-                  }))
-                }
-              />
-            </label>
-
-            <label>
-              Data
-              <input
-                type="date"
-                value={paymentForm.date}
-                onChange={(event) =>
-                  setPaymentForm((prev) => ({
-                    ...prev,
-                    date: event.target.value,
-                  }))
-                }
-              />
-            </label>
-
-            <label className="project-payment-form-wide">
-              Observação
-              <input
-                type="text"
-                value={paymentForm.note}
-                placeholder="Ex: primeira parcela / sinal / repasse"
-                onChange={(event) =>
-                  setPaymentForm((prev) => ({
-                    ...prev,
-                    note: event.target.value,
-                  }))
-                }
-              />
-            </label>
-
-            <button type="submit">Registrar pagamento</button>
-          </form>
-
-          <div className="project-payment-total">
-            <span>Total registrado</span>
-            <strong>{money(paymentsTotal)}</strong>
-          </div>
-
-          {payments.length ? (
-            <div className="project-payment-list">
-              {payments.map((payment) => (
-                <article key={payment.id} className="project-payment-item">
-                  <div>
-                    <strong>{money(payment.amount)}</strong>
-                    <span>{formatDate(payment.date)}</span>
-                    {payment.note ? <small>{payment.note}</small> : null}
-                  </div>
-
-                  <button type="button" onClick={() => onDeletePayment(project.id, payment.id)}>
-                    Excluir
-                  </button>
-                </article>
-              ))}
-            </div>
-          ) : (
-            <p className="project-payment-empty">
-              Nenhum pagamento registrado ainda.
-            </p>
-          )}
-        </div>
-
-        <div className="project-detail-section">
           <h3>Seções do projeto</h3>
 
           <div className="project-detail-shortcuts">
-            <button type="button">
+            <button type="button" onClick={() => setActiveSection("pagamentos")}>
               <span>💸</span>
               <strong>Pagamentos</strong>
-              <small>{progress}% pago</small>
+              <small>{money(paymentsTotal)} registrado</small>
             </button>
 
-            <button type="button">
+            <button type="button" onClick={() => setActiveSection("cronograma")}>
               <span>📅</span>
               <strong>Cronograma</strong>
               <small>{deadline ? formatDate(deadline) : "Sem data"}</small>
             </button>
 
-            <button type="button">
+            <button type="button" onClick={() => setActiveSection("tarefas")}>
               <span>✓</span>
               <strong>Tarefas</strong>
               <small>Em breve</small>
             </button>
 
-            <button type="button">
+            <button type="button" onClick={() => setActiveSection("arquivos")}>
               <span>📁</span>
               <strong>Arquivos</strong>
               <small>Em breve</small>
             </button>
 
-            <button type="button">
+            <button type="button" onClick={() => setActiveSection("orcamentos")}>
               <span>🧾</span>
               <strong>Orçamentos</strong>
               <small>{money(project.amount)}</small>
             </button>
 
-            <button type="button">
+            <button type="button" onClick={() => setActiveSection("diario")}>
               <span>✍</span>
               <strong>Diário</strong>
               <small>{project.note ? "1 registro" : "Sem registros"}</small>
@@ -992,6 +1122,17 @@ function ProjectDetailModal({ details, onClose, onEdit, onAddPayment, onDeletePa
             <h3>Observações</h3>
             <p className="project-detail-note">{project.note}</p>
           </div>
+        ) : null}
+
+        {activeSection ? (
+          <ProjectSectionModal
+            type={activeSection}
+            project={project}
+            hideValues={hideValues}
+            onClose={() => setActiveSection(null)}
+            onAddPayment={onAddPayment}
+            onDeletePayment={onDeletePayment}
+          />
         ) : null}
       </section>
     </div>
@@ -1924,12 +2065,7 @@ export default function App() {
 
         if (!term) return true;
 
-        return [
-          project.development,
-          project.client,
-          project.consultant,
-          project.project,
-        ]
+        return [project.development, project.client, project.consultant, project.project]
           .join(" ")
           .toLowerCase()
           .includes(term);
@@ -2069,6 +2205,7 @@ export default function App() {
       note: form.note.trim(),
       color: form.color || EVENT_COLORS[0],
       payments: existingProject?.payments || [],
+      createdAt: existingProject?.createdAt || existingProject?.updatedAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
 
