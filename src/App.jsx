@@ -356,6 +356,25 @@ function getProjectDeadline(project) {
   return project.deliveryDate || project.date || "";
 }
 
+function getProjectPayments(project) {
+  const payments = Array.isArray(project.payments) ? project.payments : [];
+
+  return [...payments].sort((a, b) => {
+    const dateA = a.date || "";
+    const dateB = b.date || "";
+
+    if (dateA !== dateB) return dateB.localeCompare(dateA);
+
+    return String(b.createdAt || "").localeCompare(String(a.createdAt || ""));
+  });
+}
+
+function getPaymentsTotal(project) {
+  return getProjectPayments(project).reduce((sum, payment) => {
+    return sum + (Number(payment.amount) || 0);
+  }, 0);
+}
+
 function getInitials(name) {
   const parts = String(name || "")
     .trim()
@@ -421,6 +440,14 @@ function emptyCalendarEvent(date = todayISO(), tag = "Compromissos") {
     endTime: "",
     color: EVENT_COLORS[1],
     description: "",
+  };
+}
+
+function emptyPaymentForm() {
+  return {
+    amount: "",
+    date: todayISO(),
+    note: "",
   };
 }
 
@@ -676,8 +703,9 @@ function ProjectMobileList({ projects, emptyMessage, onOpenDetails }) {
   );
 }
 
-function ProjectDetailModal({ details, onClose, onEdit }) {
+function ProjectDetailModal({ details, onClose, onEdit, onAddPayment, onDeletePayment }) {
   const [hideValues, setHideValues] = useState(false);
+  const [paymentForm, setPaymentForm] = useState(emptyPaymentForm);
   const { project, code } = details;
 
   const status = getDisplayStatus(project);
@@ -689,9 +717,21 @@ function ProjectDetailModal({ details, onClose, onEdit }) {
   const pending = getPendingCommission(project);
   const progress = commission ? Math.min(Math.round((received / commission) * 100), 100) : 0;
   const daysUntil = getDaysUntil(deadline);
+  const payments = getProjectPayments(project);
+  const paymentsTotal = getPaymentsTotal(project);
 
   function money(value) {
     return hideValues ? "••••••" : formatCurrency(value);
+  }
+
+  function submitPayment(event) {
+    event.preventDefault();
+
+    const saved = onAddPayment(project.id, paymentForm);
+
+    if (saved) {
+      setPaymentForm(emptyPaymentForm());
+    }
   }
 
   return (
@@ -820,6 +860,89 @@ function ProjectDetailModal({ details, onClose, onEdit }) {
             <span>A receber</span>
             <strong className="warn">{money(pending)}</strong>
           </div>
+        </div>
+
+        <div className="project-detail-section">
+          <div className="project-detail-section-title-row">
+            <h3>Pagamentos</h3>
+            <span>{payments.length} registro(s)</span>
+          </div>
+
+          <form className="project-payment-form" onSubmit={submitPayment}>
+            <label>
+              Valor recebido
+              <input
+                type="text"
+                inputMode="decimal"
+                value={paymentForm.amount}
+                placeholder="Ex: 1.500,00"
+                onChange={(event) =>
+                  setPaymentForm((prev) => ({
+                    ...prev,
+                    amount: formatMoneyInput(event.target.value),
+                  }))
+                }
+              />
+            </label>
+
+            <label>
+              Data
+              <input
+                type="date"
+                value={paymentForm.date}
+                onChange={(event) =>
+                  setPaymentForm((prev) => ({
+                    ...prev,
+                    date: event.target.value,
+                  }))
+                }
+              />
+            </label>
+
+            <label className="project-payment-form-wide">
+              Observação
+              <input
+                type="text"
+                value={paymentForm.note}
+                placeholder="Ex: primeira parcela / sinal / repasse"
+                onChange={(event) =>
+                  setPaymentForm((prev) => ({
+                    ...prev,
+                    note: event.target.value,
+                  }))
+                }
+              />
+            </label>
+
+            <button type="submit">Registrar pagamento</button>
+          </form>
+
+          <div className="project-payment-total">
+            <span>Total registrado</span>
+            <strong>{money(paymentsTotal)}</strong>
+          </div>
+
+          {payments.length ? (
+            <div className="project-payment-list">
+              {payments.map((payment) => (
+                <article key={payment.id} className="project-payment-item">
+                  <div>
+                    <strong>{money(payment.amount)}</strong>
+                    <span>{formatDate(payment.date)}</span>
+                    {payment.note ? <small>{payment.note}</small> : null}
+                  </div>
+
+                  <button type="button" onClick={() => onDeletePayment(project.id, payment.id)}>
+                    Excluir
+                  </button>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <p className="project-payment-empty">
+              Nenhum pagamento registrado ainda.
+            </p>
+          )}
         </div>
 
         <div className="project-detail-section">
@@ -1759,6 +1882,24 @@ export default function App() {
     localStorage.setItem(CALENDAR_SELECTED_DATE_STORAGE_KEY, selectedCalendarDate);
   }, [selectedCalendarDate]);
 
+  useEffect(() => {
+    if (!projectDetails) return;
+
+    const freshProject = projects.find((project) => project.id === projectDetails.project.id);
+
+    if (!freshProject) {
+      setProjectDetails(null);
+      return;
+    }
+
+    if (freshProject !== projectDetails.project) {
+      setProjectDetails({
+        project: freshProject,
+        code: freshProject.projectCode || projectDetails.code,
+      });
+    }
+  }, [projects, projectDetails]);
+
   const monthProjects = useMemo(() => {
     if (!selectedMonth) return projects;
     return projects.filter((project) => project.date?.startsWith(selectedMonth));
@@ -1874,6 +2015,8 @@ export default function App() {
   function saveProject(event) {
     event.preventDefault();
 
+    const existingProject = projects.find((item) => item.id === editingId);
+
     const amount = parseMoney(form.amount);
     const commissionPercent = parsePercent(form.commissionPercent);
     const commission = amount * (commissionPercent / 100);
@@ -1925,6 +2068,7 @@ export default function App() {
       status,
       note: form.note.trim(),
       color: form.color || EVENT_COLORS[0],
+      payments: existingProject?.payments || [],
       updatedAt: new Date().toISOString(),
     };
 
@@ -1964,6 +2108,100 @@ export default function App() {
               }
             : project
         )
+      )
+    );
+  }
+
+  function addProjectPayment(projectId, paymentFormPayload) {
+    const amount = parseMoney(paymentFormPayload.amount);
+
+    if (amount <= 0) {
+      window.alert("Informe um valor recebido.");
+      return false;
+    }
+
+    setProjects((current) =>
+      normalizeProjectCodes(
+        current.map((project) => {
+          if (project.id !== projectId) return project;
+
+          const commission = getCommission(project);
+          const currentReceived = getReceivedCommission(project);
+          const nextReceived =
+            commission > 0 ? Math.min(currentReceived + amount, commission) : currentReceived + amount;
+
+          let nextStatus = project.status;
+
+          if (project.status !== "Cancelado") {
+            if (commission > 0 && nextReceived >= commission) {
+              nextStatus = "Recebido";
+            } else if (nextReceived > 0) {
+              nextStatus = "Parcial";
+            } else {
+              nextStatus = "A receber";
+            }
+          }
+
+          const newPayment = {
+            id: createId(),
+            amount,
+            date: paymentFormPayload.date || todayISO(),
+            note: String(paymentFormPayload.note || "").trim(),
+            createdAt: new Date().toISOString(),
+          };
+
+          return {
+            ...project,
+            payments: [...getProjectPayments(project), newPayment],
+            receivedAmount: nextReceived,
+            receivedDate: newPayment.date,
+            status: nextStatus,
+            updatedAt: new Date().toISOString(),
+          };
+        })
+      )
+    );
+
+    return true;
+  }
+
+  function deleteProjectPayment(projectId, paymentId) {
+    const confirmDelete = window.confirm("Excluir este pagamento?");
+    if (!confirmDelete) return;
+
+    setProjects((current) =>
+      normalizeProjectCodes(
+        current.map((project) => {
+          if (project.id !== projectId) return project;
+
+          const paymentToRemove = getProjectPayments(project).find((payment) => payment.id === paymentId);
+          const removedAmount = Number(paymentToRemove?.amount) || 0;
+          const remainingPayments = getProjectPayments(project).filter((payment) => payment.id !== paymentId);
+
+          const commission = getCommission(project);
+          const nextReceived = Math.max(getReceivedCommission(project) - removedAmount, 0);
+
+          let nextStatus = project.status;
+
+          if (project.status !== "Cancelado") {
+            if (nextReceived <= 0) {
+              nextStatus = "A receber";
+            } else if (commission > 0 && nextReceived >= commission) {
+              nextStatus = "Recebido";
+            } else {
+              nextStatus = "Parcial";
+            }
+          }
+
+          return {
+            ...project,
+            payments: remainingPayments,
+            receivedAmount: nextReceived,
+            receivedDate: remainingPayments[0]?.date || "",
+            status: nextStatus,
+            updatedAt: new Date().toISOString(),
+          };
+        })
       )
     );
   }
@@ -2359,6 +2597,8 @@ export default function App() {
           details={projectDetails}
           onClose={() => setProjectDetails(null)}
           onEdit={editProjectFromDetails}
+          onAddPayment={addProjectPayment}
+          onDeletePayment={deleteProjectPayment}
         />
       ) : null}
     </main>
