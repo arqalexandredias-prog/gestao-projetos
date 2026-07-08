@@ -1296,17 +1296,41 @@ function CalendarPage({
         : getMonthCells(monthToUse);
 
   const projectCalendarEvents = useMemo(() => {
-    return projects.map((project) => ({
-      id: `project-${project.id}`,
-      kind: "project",
-      tag: "Projeto",
-      title: project.client || project.development || project.project || "Projeto",
-      subtitle: project.development || project.project || "",
-      description: project.note || "",
-      date: project.date,
-      color: project.color || EVENT_COLORS[0],
-      project,
-    }));
+    return projects.flatMap((project) => {
+      const title = getProjectTitle(project);
+      const client = getProjectClient(project);
+      const deadline = getProjectDeadline(project);
+
+      const projectEvent = {
+        id: `project-${project.id}`,
+        kind: "project",
+        tag: "Projeto",
+        title: client,
+        subtitle: title,
+        description: project.note || "",
+        date: project.date,
+        color: project.color || EVENT_COLORS[0],
+        project,
+      };
+
+      if (!deadline || deadline === project.date) {
+        return [projectEvent];
+      }
+
+      const deadlineEvent = {
+        id: `project-deadline-${project.id}`,
+        kind: "project",
+        tag: "Cronograma",
+        title: `Entrega: ${title}`,
+        subtitle: client,
+        description: `Prazo de entrega do projeto ${title}.`,
+        date: deadline,
+        color: EVENT_COLORS[4],
+        project,
+      };
+
+      return [projectEvent, deadlineEvent];
+    });
   }, [projects]);
 
   const allCalendarEvents = useMemo(() => {
@@ -1720,8 +1744,11 @@ export default function App() {
 
   const nextProjects = useMemo(() => {
     return [...projects]
-      .filter((project) => project.date >= todayISO() && project.status !== "Cancelado")
-      .sort((a, b) => a.date.localeCompare(b.date))
+      .filter((project) => {
+        const date = getProjectDeadline(project);
+        return date >= todayISO() && project.status !== "Cancelado";
+      })
+      .sort((a, b) => getProjectDeadline(a).localeCompare(getProjectDeadline(b)))
       .slice(0, 5);
   }, [projects]);
 
@@ -1834,8 +1861,8 @@ export default function App() {
       setProjects((current) => [payload, ...current]);
     }
 
-    setSelectedCalendarDate(payload.date);
-    setSelectedMonth(payload.date.slice(0, 7));
+    setSelectedCalendarDate(payload.deliveryDate || payload.date);
+    setSelectedMonth((payload.deliveryDate || payload.date).slice(0, 7));
     setProjectDetails(null);
     closeForm();
   }
@@ -2086,7 +2113,7 @@ export default function App() {
                           <span>{project.development || project.project || "Projeto"}</span>
                         </div>
 
-                        <span>{formatDate(project.date)}</span>
+                        <span>{formatDate(getProjectDeadline(project))}</span>
                       </button>
                     ))
                   ) : (
