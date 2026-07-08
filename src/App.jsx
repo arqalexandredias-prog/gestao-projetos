@@ -76,7 +76,11 @@ function loadActivePage() {
 function loadCalendarView() {
   try {
     const savedView = localStorage.getItem(CALENDAR_VIEW_STORAGE_KEY);
-    return savedView === "semana" ? "semana" : "mes";
+
+    if (savedView === "semana") return "semana";
+    if (savedView === "dia") return "dia";
+
+    return "mes";
   } catch {
     return "mes";
   }
@@ -358,6 +362,20 @@ function getWeekCells(dateString) {
       isToday: iso === todayISO(),
     };
   });
+}
+
+function getDayCells(dateString) {
+  const date = parseISODate(dateString);
+  const iso = toISODate(date);
+
+  return [
+    {
+      iso,
+      day: date.getDate(),
+      isCurrentMonth: true,
+      isToday: iso === todayISO(),
+    },
+  ];
 }
 
 function getTagLabel(tagId) {
@@ -919,7 +937,11 @@ function CalendarPage({
   const nextMonthLabel = formatAdjacentMonthLabel(monthToUse, 1);
 
   const calendarCells =
-    calendarView === "semana" ? getWeekCells(selectedCalendarDate) : getMonthCells(monthToUse);
+    calendarView === "dia"
+      ? getDayCells(selectedCalendarDate)
+      : calendarView === "semana"
+        ? getWeekCells(selectedCalendarDate)
+        : getMonthCells(monthToUse);
 
   const projectCalendarEvents = useMemo(() => {
     return projects.map((project) => ({
@@ -977,17 +999,13 @@ function CalendarPage({
     setMonth(nextDateISO.slice(0, 7));
   }
 
-  function goToToday() {
-    const today = todayISO();
-    setSelectedCalendarDate(today);
-    setMonth(today.slice(0, 7));
+  function changeDay(direction) {
+    const currentDate = parseISODate(selectedCalendarDate);
+    const nextDate = addDays(currentDate, direction);
+    const nextDateISO = toISODate(nextDate);
 
-    window.setTimeout(() => {
-      detailRef.current?.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      });
-    }, 80);
+    setSelectedCalendarDate(nextDateISO);
+    setMonth(nextDateISO.slice(0, 7));
   }
 
   function toggleTag(tagId) {
@@ -1012,15 +1030,65 @@ function CalendarPage({
     }, 80);
   }
 
+  function getCalendarTitle() {
+    if (calendarView === "dia") return formatLongDate(selectedCalendarDate);
+    if (calendarView === "semana") return formatWeekLabel(selectedCalendarDate);
+
+    return formatMonthLabel(monthToUse);
+  }
+
+  function getPreviousLabel() {
+    if (calendarView === "dia") return "Dia";
+    if (calendarView === "semana") return "Semana";
+
+    return previousMonthLabel;
+  }
+
+  function getNextLabel() {
+    if (calendarView === "dia") return "Dia";
+    if (calendarView === "semana") return "Semana";
+
+    return nextMonthLabel;
+  }
+
+  function goToPreviousPeriod() {
+    if (calendarView === "dia") {
+      changeDay(-1);
+      return;
+    }
+
+    if (calendarView === "semana") {
+      changeWeek(-1);
+      return;
+    }
+
+    changeMonth(-1);
+  }
+
+  function goToNextPeriod() {
+    if (calendarView === "dia") {
+      changeDay(1);
+      return;
+    }
+
+    if (calendarView === "semana") {
+      changeWeek(1);
+      return;
+    }
+
+    changeMonth(1);
+  }
+
+  const calendarGridStyle =
+    calendarView === "dia"
+      ? { gridTemplateColumns: "1fr" }
+      : undefined;
+
   return (
     <section className="calendar-reference-page">
       <div className="calendar-reference-header">
         <div>
-          <h1>
-            {calendarView === "semana"
-              ? formatWeekLabel(selectedCalendarDate)
-              : formatMonthLabel(monthToUse)}
-          </h1>
+          <h1>{getCalendarTitle()}</h1>
         </div>
       </div>
 
@@ -1040,6 +1108,14 @@ function CalendarPage({
         >
           Semana
         </button>
+
+        <button
+          type="button"
+          className={calendarView === "dia" ? "active" : ""}
+          onClick={() => setCalendarView("dia")}
+        >
+          Dia
+        </button>
       </div>
 
       <div className="calendar-tag-tabs">
@@ -1056,37 +1132,37 @@ function CalendarPage({
       </div>
 
       <div className="calendar-month-nav">
-        <button
-          type="button"
-          onClick={() => (calendarView === "semana" ? changeWeek(-1) : changeMonth(-1))}
-        >
-          ← {calendarView === "semana" ? "Semana" : previousMonthLabel}
+        <button type="button" onClick={goToPreviousPeriod}>
+          ← {getPreviousLabel()}
         </button>
 
-        <button type="button" onClick={goToToday}>
-          Hoje
-        </button>
-
-        <button
-          type="button"
-          onClick={() => (calendarView === "semana" ? changeWeek(1) : changeMonth(1))}
-        >
-          {calendarView === "semana" ? "Semana" : nextMonthLabel} →
+        <button type="button" onClick={goToNextPeriod}>
+          {getNextLabel()} →
         </button>
       </div>
 
-      <div className={`reference-calendar-card ${calendarView === "semana" ? "week-view" : ""}`}>
-        <div className="reference-calendar-weekdays">
-          <span>Dom</span>
-          <span>Seg</span>
-          <span>Ter</span>
-          <span>Qua</span>
-          <span>Qui</span>
-          <span>Sex</span>
-          <span>Sáb</span>
+      <div
+        className={`reference-calendar-card ${
+          calendarView === "semana" ? "week-view" : calendarView === "dia" ? "day-view" : ""
+        }`}
+      >
+        <div className="reference-calendar-weekdays" style={calendarGridStyle}>
+          {calendarView === "dia" ? (
+            <span>Dia</span>
+          ) : (
+            <>
+              <span>Dom</span>
+              <span>Seg</span>
+              <span>Ter</span>
+              <span>Qua</span>
+              <span>Qui</span>
+              <span>Sex</span>
+              <span>Sáb</span>
+            </>
+          )}
         </div>
 
-        <div className="reference-calendar-grid">
+        <div className="reference-calendar-grid" style={calendarGridStyle}>
           {calendarCells.map((cell) => {
             const dayEvents = eventsByDate[cell.iso] || [];
             const isSelected = selectedCalendarDate === cell.iso;
@@ -1103,7 +1179,7 @@ function CalendarPage({
                 <span className="reference-day-number">{cell.day}</span>
 
                 <div className="reference-day-events">
-                  {dayEvents.slice(0, 3).map((event) => (
+                  {dayEvents.slice(0, calendarView === "dia" ? 8 : 3).map((event) => (
                     <span
                       key={event.id}
                       className="reference-event-pill"
@@ -1113,8 +1189,10 @@ function CalendarPage({
                     </span>
                   ))}
 
-                  {dayEvents.length > 3 ? (
-                    <small className="reference-more-events">+{dayEvents.length - 3} mais</small>
+                  {dayEvents.length > (calendarView === "dia" ? 8 : 3) ? (
+                    <small className="reference-more-events">
+                      +{dayEvents.length - (calendarView === "dia" ? 8 : 3)} mais
+                    </small>
                   ) : null}
                 </div>
               </button>
