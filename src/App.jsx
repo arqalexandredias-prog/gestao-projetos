@@ -3,9 +3,36 @@ import "./App.css";
 
 const STORAGE_KEY = "alexandre-dias-gestao-projetos-v1";
 const PAGE_STORAGE_KEY = "alexandre-dias-gestao-projetos-pagina-atual";
+const CALENDAR_EVENTS_STORAGE_KEY = "alexandre-dias-gestao-projetos-eventos-calendario-v1";
 
 const STATUS_OPTIONS = ["Orçamento", "A receber", "Parcial", "Recebido", "Cancelado"];
 const VALID_PAGES = ["resumo", "projetos", "calendario"];
+
+const CALENDAR_TAGS = [
+  { id: "Projeto", label: "Projetos" },
+  { id: "Cronograma", label: "Cronograma" },
+  { id: "Aniversário", label: "Aniversários" },
+  { id: "Compromissos", label: "Compromissos" },
+  { id: "Financeiro", label: "Financeiro" },
+];
+
+const EVENT_COLORS = [
+  "#3b82f6",
+  "#22c55e",
+  "#f59e0b",
+  "#8b5cf6",
+  "#ec4899",
+  "#14b8a6",
+  "#c47a5a",
+  "#2563eb",
+  "#0f766e",
+  "#84cc16",
+  "#a855f7",
+  "#d946ef",
+  "#0891b2",
+  "#dc2626",
+  "#475569",
+];
 
 function todayISO() {
   const now = new Date();
@@ -16,6 +43,22 @@ function todayISO() {
 function createId() {
   if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function toISODate(date) {
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 10);
+}
+
+function parseISODate(dateString) {
+  const [year, month, day] = String(dateString).split("-").map(Number);
+  return new Date(year, month - 1, day);
+}
+
+function addDays(date, amount) {
+  const next = new Date(date);
+  next.setDate(next.getDate() + amount);
+  return next;
 }
 
 function loadActivePage() {
@@ -85,7 +128,7 @@ function formatCurrency(value) {
 function formatDate(dateString) {
   if (!dateString) return "-";
 
-  const [year, month, day] = dateString.split("-");
+  const [year, month, day] = String(dateString).split("-");
   if (!year || !month || !day) return "-";
 
   return `${day}/${month}/${year}`;
@@ -170,6 +213,15 @@ function loadProjects() {
   }
 }
 
+function loadCalendarEvents() {
+  try {
+    const saved = localStorage.getItem(CALENDAR_EVENTS_STORAGE_KEY);
+    return saved ? JSON.parse(saved) : [];
+  } catch {
+    return [];
+  }
+}
+
 function getStatusClass(status) {
   const map = {
     Orçamento: "orcamento",
@@ -182,17 +234,31 @@ function getStatusClass(status) {
   return map[status] || "padrao";
 }
 
-function BrandLogo({ mobile = false }) {
+function getMonthCells(monthString) {
+  const [year, month] = monthString.split("-").map(Number);
+  const firstDay = new Date(year, month - 1, 1);
+  const start = addDays(firstDay, -firstDay.getDay());
+
+  return Array.from({ length: 42 }, (_, index) => {
+    const date = addDays(start, index);
+    const iso = toISODate(date);
+
+    return {
+      iso,
+      day: date.getDate(),
+      isCurrentMonth: date.getMonth() === month - 1,
+      isToday: iso === todayISO(),
+    };
+  });
+}
+
+function getTagLabel(tagId) {
+  return CALENDAR_TAGS.find((tag) => tag.id === tagId)?.label || tagId;
+}
+
+function BrandLogo() {
   return (
-    <div className={`brand-wordmark ${mobile ? "brand-wordmark-mobile" : ""}`}>
-      <div className="brand-monogram">
-        <span className="brand-letter-a">A</span>
-        <span className="brand-letter-d">D</span>
-        <i />
-      </div>
-
-      <div className="brand-divider" />
-
+    <div className="brand-wordmark">
       <div className="brand-copy">
         <strong>
           Alexandre Dias <em>| Interiores</em>
@@ -342,7 +408,7 @@ function ProjectFormModal({ form, setForm, editingId, onClose, onSubmit }) {
 
   return (
     <div className="modal-backdrop">
-      <div className="modal">
+      <div className="modal project-modal">
         <div className="modal-header">
           <div>
             <p>{editingId ? "Editar lançamento" : "Novo lançamento"}</p>
@@ -551,246 +617,426 @@ function ProjectListItem({ project, onEdit }) {
   );
 }
 
-function FullCalendarPage({
-  month,
-  setMonth,
-  selectedDate,
-  setSelectedDate,
-  projects,
-  onEdit,
-  onDelete,
-  onMarkReceived,
-  onNewProject,
-}) {
-  const monthToUse = month || todayISO().slice(0, 7);
-  const [year, monthNumber] = monthToUse.split("-").map(Number);
-  const firstDay = new Date(year, monthNumber - 1, 1);
-  const daysInMonth = new Date(year, monthNumber, 0).getDate();
-  const startWeekday = firstDay.getDay();
+function CalendarEventForm({ selectedDate, onSave, onCancel }) {
+  const [eventForm, setEventForm] = useState({
+    title: "",
+    date: selectedDate,
+    tag: "Compromissos",
+    startTime: "",
+    endTime: "",
+    color: EVENT_COLORS[0],
+    description: "",
+  });
 
-  const projectsByDate = projects.reduce((acc, project) => {
-    if (!acc[project.date]) acc[project.date] = [];
-    acc[project.date].push(project);
-    return acc;
-  }, {});
-
-  const cells = [];
-
-  for (let index = 0; index < startWeekday; index += 1) {
-    cells.push(null);
+  function updateField(field, value) {
+    setEventForm((prev) => ({ ...prev, [field]: value }));
   }
 
-  for (let day = 1; day <= daysInMonth; day += 1) {
-    const date = `${year}-${String(monthNumber).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-    cells.push(date);
-  }
+  function submitEvent(event) {
+    event.preventDefault();
 
-  const selectedProjects = selectedDate
-    ? [...(projectsByDate[selectedDate] || [])].sort((a, b) => a.client.localeCompare(b.client))
-    : [];
+    if (!eventForm.title.trim()) {
+      window.alert("Informe o título do compromisso.");
+      return;
+    }
 
-  function changeMonth(direction) {
-    const next = new Date(year, monthNumber - 1 + direction, 1);
-    const nextMonth = `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, "0")}`;
-    setMonth(nextMonth);
-    setSelectedDate(null);
-  }
-
-  function selectToday() {
-    const today = todayISO();
-    setMonth(today.slice(0, 7));
-    setSelectedDate(today);
+    onSave({
+      id: createId(),
+      kind: "manual",
+      title: eventForm.title.trim(),
+      date: eventForm.date,
+      tag: eventForm.tag,
+      startTime: eventForm.startTime,
+      endTime: eventForm.endTime,
+      color: eventForm.color,
+      description: eventForm.description.trim(),
+      createdAt: new Date().toISOString(),
+    });
   }
 
   return (
-    <section className="calendar-page">
-      <div className="calendar-page-header">
+    <form className="calendar-event-form" onSubmit={submitEvent}>
+      <h3>Novo compromisso</h3>
+
+      <label>
+        Título
+        <input
+          type="text"
+          value={eventForm.title}
+          placeholder="Nome do compromisso"
+          onChange={(event) => updateField("title", event.target.value)}
+        />
+      </label>
+
+      <label>
+        Data
+        <input
+          type="date"
+          value={eventForm.date}
+          onChange={(event) => updateField("date", event.target.value)}
+        />
+      </label>
+
+      <div className="event-time-grid">
+        <label>
+          Hora início
+          <input
+            type="time"
+            value={eventForm.startTime}
+            onChange={(event) => updateField("startTime", event.target.value)}
+          />
+        </label>
+
+        <label>
+          Hora fim
+          <input
+            type="time"
+            value={eventForm.endTime}
+            onChange={(event) => updateField("endTime", event.target.value)}
+          />
+        </label>
+      </div>
+
+      <label>
+        Tag
+        <select value={eventForm.tag} onChange={(event) => updateField("tag", event.target.value)}>
+          {CALENDAR_TAGS.filter((tag) => tag.id !== "Projeto").map((tag) => (
+            <option key={tag.id} value={tag.id}>
+              {tag.label}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      <div className="color-field">
+        <span>Cor</span>
+
+        <div className="color-options">
+          {EVENT_COLORS.map((color) => (
+            <button
+              type="button"
+              key={color}
+              className={`color-dot ${eventForm.color === color ? "active" : ""}`}
+              style={{ backgroundColor: color }}
+              onClick={() => updateField("color", color)}
+              aria-label={`Selecionar cor ${color}`}
+            />
+          ))}
+        </div>
+      </div>
+
+      <label>
+        Descrição
+        <textarea
+          rows="3"
+          value={eventForm.description}
+          placeholder="Observações opcionais"
+          onChange={(event) => updateField("description", event.target.value)}
+        />
+      </label>
+
+      <div className="calendar-event-form-actions">
+        <button type="button" className="secondary-button" onClick={onCancel}>
+          Cancelar
+        </button>
+
+        <button type="submit" className="calendar-save-button">
+          Salvar
+        </button>
+      </div>
+    </form>
+  );
+}
+
+function CalendarDayModal({
+  date,
+  events,
+  activeTags,
+  onClose,
+  onCreateEvent,
+  onDeleteEvent,
+  onEditProject,
+}) {
+  const [isCreating, setIsCreating] = useState(false);
+
+  const filteredEvents = events
+    .filter((event) => activeTags.includes(event.tag))
+    .sort((a, b) => {
+      const timeA = a.startTime || "99:99";
+      const timeB = b.startTime || "99:99";
+      return timeA.localeCompare(timeB);
+    });
+
+  return (
+    <div className="calendar-modal-backdrop">
+      <div className="calendar-modal">
+        <div className="calendar-modal-header">
+          <div>
+            <h2>{formatDate(date)}</h2>
+            <span>{filteredEvents.length} item(ns) neste dia</span>
+          </div>
+
+          <button type="button" className="calendar-close-button" onClick={onClose}>
+            ×
+          </button>
+        </div>
+
+        {!isCreating ? (
+          <>
+            <div className="calendar-modal-section">
+              <div className="calendar-modal-section-header">
+                <h3>Compromissos</h3>
+
+                <button
+                  type="button"
+                  className="calendar-add-button"
+                  onClick={() => setIsCreating(true)}
+                >
+                  + Cadastrar
+                </button>
+              </div>
+
+              {filteredEvents.length ? (
+                <div className="calendar-modal-events">
+                  {filteredEvents.map((event) => (
+                    <article className="calendar-modal-event-card" key={event.id}>
+                      <div
+                        className="calendar-event-color-line"
+                        style={{ backgroundColor: event.color }}
+                      />
+
+                      <div className="calendar-modal-event-content">
+                        <div className="calendar-modal-event-top">
+                          <div>
+                            <strong>{event.title}</strong>
+                            <span>{getTagLabel(event.tag)}</span>
+                          </div>
+
+                          {event.startTime || event.endTime ? (
+                            <small>
+                              {event.startTime || "--:--"}
+                              {event.endTime ? ` às ${event.endTime}` : ""}
+                            </small>
+                          ) : null}
+                        </div>
+
+                        {event.subtitle ? <p>{event.subtitle}</p> : null}
+                        {event.description ? <p>{event.description}</p> : null}
+
+                        <div className="calendar-modal-event-actions">
+                          {event.kind === "project" ? (
+                            <button type="button" onClick={() => onEditProject(event.project)}>
+                              Editar projeto
+                            </button>
+                          ) : (
+                            <button type="button" className="danger" onClick={() => onDeleteEvent(event.id)}>
+                              Excluir
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <div className="calendar-empty-modal">
+                  Nenhum compromisso cadastrado para as tags selecionadas.
+                </div>
+              )}
+            </div>
+          </>
+        ) : (
+          <CalendarEventForm
+            selectedDate={date}
+            onSave={(payload) => {
+              onCreateEvent(payload);
+              setIsCreating(false);
+            }}
+            onCancel={() => setIsCreating(false)}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
+function CalendarPage({
+  month,
+  setMonth,
+  projects,
+  calendarEvents,
+  activeCalendarTags,
+  setActiveCalendarTags,
+  selectedCalendarDate,
+  setSelectedCalendarDate,
+  isDayModalOpen,
+  setIsDayModalOpen,
+  onCreateCalendarEvent,
+  onDeleteCalendarEvent,
+  onEditProject,
+}) {
+  const monthToUse = month || todayISO().slice(0, 7);
+  const monthCells = getMonthCells(monthToUse);
+
+  const projectCalendarEvents = useMemo(() => {
+    return projects.map((project) => ({
+      id: `project-${project.id}`,
+      kind: "project",
+      tag: "Projeto",
+      title: project.client || project.development || project.project || "Projeto",
+      subtitle: project.development || project.project || "",
+      date: project.date,
+      color: "#c47a5a",
+      project,
+    }));
+  }, [projects]);
+
+  const allCalendarEvents = useMemo(() => {
+    return [...projectCalendarEvents, ...calendarEvents];
+  }, [projectCalendarEvents, calendarEvents]);
+
+  const filteredCalendarEvents = useMemo(() => {
+    return allCalendarEvents.filter((event) => activeCalendarTags.includes(event.tag));
+  }, [allCalendarEvents, activeCalendarTags]);
+
+  const eventsByDate = useMemo(() => {
+    return filteredCalendarEvents.reduce((acc, event) => {
+      if (!acc[event.date]) acc[event.date] = [];
+      acc[event.date].push(event);
+      return acc;
+    }, {});
+  }, [filteredCalendarEvents]);
+
+  const selectedDayEvents = useMemo(() => {
+    return allCalendarEvents.filter((event) => event.date === selectedCalendarDate);
+  }, [allCalendarEvents, selectedCalendarDate]);
+
+  function changeMonth(direction) {
+    const [year, monthNumber] = monthToUse.split("-").map(Number);
+    const next = new Date(year, monthNumber - 1 + direction, 1);
+    const nextMonth = `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, "0")}`;
+    setMonth(nextMonth);
+  }
+
+  function toggleTag(tagId) {
+    setActiveCalendarTags((current) => {
+      if (current.includes(tagId)) {
+        return current.filter((tag) => tag !== tagId);
+      }
+
+      return [...current, tagId];
+    });
+  }
+
+  function openDay(date) {
+    setSelectedCalendarDate(date);
+    setIsDayModalOpen(true);
+  }
+
+  return (
+    <section className="calendar-reference-page">
+      <div className="calendar-reference-header">
         <div>
-          <p>Calendário</p>
           <h1>{formatMonthLabel(monthToUse)}</h1>
         </div>
 
-        <div className="calendar-page-actions">
+        <div className="calendar-month-nav">
           <button type="button" onClick={() => changeMonth(-1)}>
             ← Mês anterior
           </button>
 
-          <button type="button" onClick={selectToday}>
+          <button type="button" onClick={() => setMonth(todayISO().slice(0, 7))}>
             Hoje
           </button>
 
           <button type="button" onClick={() => changeMonth(1)}>
             Próximo mês →
           </button>
+        </div>
+      </div>
 
+      <div className="calendar-tag-tabs">
+        {CALENDAR_TAGS.map((tag) => (
           <button
+            key={tag.id}
             type="button"
-            className="primary-button"
-            onClick={() => onNewProject(selectedDate || todayISO())}
+            className={activeCalendarTags.includes(tag.id) ? "active" : ""}
+            onClick={() => toggleTag(tag.id)}
           >
-            + Novo projeto
+            {tag.label}
           </button>
+        ))}
+      </div>
+
+      <div className="reference-calendar-card">
+        <div className="reference-calendar-weekdays">
+          <span>Dom</span>
+          <span>Seg</span>
+          <span>Ter</span>
+          <span>Qua</span>
+          <span>Qui</span>
+          <span>Sex</span>
+          <span>Sáb</span>
+        </div>
+
+        <div className="reference-calendar-grid">
+          {monthCells.map((cell) => {
+            const dayEvents = eventsByDate[cell.iso] || [];
+            const isSelected = selectedCalendarDate === cell.iso;
+
+            return (
+              <button
+                type="button"
+                key={cell.iso}
+                className={`reference-calendar-day ${!cell.isCurrentMonth ? "muted" : ""} ${
+                  cell.isToday ? "today" : ""
+                } ${isSelected ? "selected" : ""}`}
+                onClick={() => openDay(cell.iso)}
+              >
+                <span className="reference-day-number">{cell.day}</span>
+
+                <div className="reference-day-events">
+                  {dayEvents.slice(0, 3).map((event) => (
+                    <span
+                      key={event.id}
+                      className="reference-event-pill"
+                      style={{ borderLeftColor: event.color, color: event.color }}
+                    >
+                      {event.title}
+                    </span>
+                  ))}
+
+                  {dayEvents.length > 3 ? (
+                    <small className="reference-more-events">+{dayEvents.length - 3}</small>
+                  ) : null}
+                </div>
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      <div className="calendar-chips">
-        <span>Projetos</span>
-        <span>A receber</span>
-        <span>Parcial</span>
-        <span>Recebido</span>
-        <span>Cancelado</span>
-      </div>
-
-      <div className="full-calendar-layout">
-        <div className="full-calendar-card">
-          <div className="full-calendar-weekdays">
-            <span>Dom</span>
-            <span>Seg</span>
-            <span>Ter</span>
-            <span>Qua</span>
-            <span>Qui</span>
-            <span>Sex</span>
-            <span>Sáb</span>
-          </div>
-
-          <div className="full-calendar-grid">
-            {cells.map((date, index) => {
-              const dayProjects = date ? projectsByDate[date] || [] : [];
-              const isSelected = date && selectedDate === date;
-              const isToday = date === todayISO();
-
-              return (
-                <div
-                  key={`${date || "empty"}-${index}`}
-                  className={`full-calendar-day ${!date ? "is-empty" : ""} ${
-                    isSelected ? "is-selected" : ""
-                  } ${isToday ? "is-today" : ""}`}
-                  onClick={() => date && setSelectedDate(date)}
-                  role="button"
-                  tabIndex={date ? 0 : -1}
-                >
-                  <strong>{date ? Number(date.slice(-2)) : ""}</strong>
-
-                  <div className="calendar-events">
-                    {dayProjects.slice(0, 3).map((project) => {
-                      const status = getDisplayStatus(project);
-
-                      return (
-                        <button
-                          type="button"
-                          key={project.id}
-                          className={`calendar-event calendar-event-${getStatusClass(status)}`}
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            setSelectedDate(date);
-                          }}
-                        >
-                          {project.client || project.development || project.project || "Projeto"}
-                        </button>
-                      );
-                    })}
-
-                    {dayProjects.length > 3 ? (
-                      <span className="more-events">+{dayProjects.length - 3} mais</span>
-                    ) : null}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        <aside className="calendar-side-panel">
-          <div className="calendar-side-header">
-            <div>
-              <p>Dia selecionado</p>
-              <h2>{selectedDate ? formatDate(selectedDate) : "Selecione uma data"}</h2>
-            </div>
-
-            <button type="button" onClick={() => onNewProject(selectedDate || todayISO())}>
-              + Cadastrar
-            </button>
-          </div>
-
-          <div className="calendar-side-content">
-            {selectedDate ? (
-              selectedProjects.length ? (
-                selectedProjects.map((project) => (
-                  <article className="calendar-detail-card" key={project.id}>
-                    <div className="calendar-detail-head">
-                      <div>
-                        <strong>{project.client || "Cliente sem nome"}</strong>
-                        <span>{project.development || "Sem empreendimento"}</span>
-                      </div>
-
-                      <StatusBadge status={getDisplayStatus(project)} />
-                    </div>
-
-                    <dl>
-                      <div>
-                        <dt>Projeto</dt>
-                        <dd>{project.project || "-"}</dd>
-                      </div>
-
-                      <div>
-                        <dt>Consultor</dt>
-                        <dd>{project.consultant || "-"}</dd>
-                      </div>
-
-                      <div>
-                        <dt>Valor</dt>
-                        <dd>{formatCurrency(project.amount)}</dd>
-                      </div>
-
-                      <div>
-                        <dt>Comissão</dt>
-                        <dd>{formatCurrency(getCommission(project))}</dd>
-                      </div>
-
-                      <div>
-                        <dt>Falta receber</dt>
-                        <dd>{formatCurrency(getPendingCommission(project))}</dd>
-                      </div>
-                    </dl>
-
-                    {project.note ? <p className="calendar-note">{project.note}</p> : null}
-
-                    <div className="calendar-detail-actions">
-                      <button type="button" onClick={() => onEdit(project)}>
-                        Editar
-                      </button>
-
-                      {getDisplayStatus(project) !== "Recebido" ? (
-                        <button type="button" onClick={() => onMarkReceived(project.id)}>
-                          Recebido
-                        </button>
-                      ) : null}
-
-                      <button type="button" className="danger" onClick={() => onDelete(project.id)}>
-                        Excluir
-                      </button>
-                    </div>
-                  </article>
-                ))
-              ) : (
-                <div className="soft-empty">
-                  Nenhum projeto nessa data.
-                </div>
-              )
-            ) : (
-              <div className="soft-empty">
-                Clique em um dia do calendário para ver os projetos cadastrados.
-              </div>
-            )}
-          </div>
-        </aside>
-      </div>
+      {isDayModalOpen ? (
+        <CalendarDayModal
+          date={selectedCalendarDate}
+          events={selectedDayEvents}
+          activeTags={activeCalendarTags}
+          onClose={() => setIsDayModalOpen(false)}
+          onCreateEvent={onCreateCalendarEvent}
+          onDeleteEvent={onDeleteCalendarEvent}
+          onEditProject={(project) => {
+            setIsDayModalOpen(false);
+            onEditProject(project);
+          }}
+        />
+      ) : null}
     </section>
   );
 }
 
 export default function App() {
   const [projects, setProjects] = useState(loadProjects);
+  const [calendarEvents, setCalendarEvents] = useState(loadCalendarEvents);
   const [activePage, setActivePage] = useState(loadActivePage);
 
   const [form, setForm] = useState(emptyProjectForm);
@@ -801,17 +1047,21 @@ export default function App() {
   const [statusFilter, setStatusFilter] = useState("Todos");
   const [search, setSearch] = useState("");
 
-  const [selectedDate, setSelectedDate] = useState(todayISO());
+  const [activeCalendarTags, setActiveCalendarTags] = useState(["Projeto"]);
+  const [selectedCalendarDate, setSelectedCalendarDate] = useState(todayISO());
+  const [isDayModalOpen, setIsDayModalOpen] = useState(false);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(projects));
   }, [projects]);
 
   useEffect(() => {
+    localStorage.setItem(CALENDAR_EVENTS_STORAGE_KEY, JSON.stringify(calendarEvents));
+  }, [calendarEvents]);
+
+  useEffect(() => {
     localStorage.setItem(PAGE_STORAGE_KEY, activePage);
   }, [activePage]);
-
-  const currentMonthForUi = selectedMonth || todayISO().slice(0, 7);
 
   const monthProjects = useMemo(() => {
     if (!selectedMonth) return projects;
@@ -960,7 +1210,7 @@ export default function App() {
       setProjects((current) => [payload, ...current]);
     }
 
-    setSelectedDate(payload.date);
+    setSelectedCalendarDate(payload.date);
     setSelectedMonth(payload.date.slice(0, 7));
     closeForm();
   }
@@ -986,6 +1236,19 @@ export default function App() {
           : project
       )
     );
+  }
+
+  function createCalendarEvent(payload) {
+    setCalendarEvents((current) => [payload, ...current]);
+    setSelectedCalendarDate(payload.date);
+    setSelectedMonth(payload.date.slice(0, 7));
+  }
+
+  function deleteCalendarEvent(id) {
+    const confirmDelete = window.confirm("Deseja excluir este compromisso?");
+    if (!confirmDelete) return;
+
+    setCalendarEvents((current) => current.filter((event) => event.id !== id));
   }
 
   return (
@@ -1037,17 +1300,7 @@ export default function App() {
       <section className="content">
         <header className="topbar">
           <div className="topbar-brand">
-            <BrandLogo mobile />
-          </div>
-
-          <div className="topbar-actions">
-            <button type="button" className="primary-button topbar-primary" onClick={() => openNewProject()}>
-              + Novo projeto
-            </button>
-
-            <button type="button" className="ghost-button" onClick={() => setActivePage("calendario")}>
-              Calendário
-            </button>
+            <BrandLogo />
           </div>
         </header>
 
@@ -1260,16 +1513,20 @@ export default function App() {
         ) : null}
 
         {activePage === "calendario" ? (
-          <FullCalendarPage
-            month={currentMonthForUi}
+          <CalendarPage
+            month={selectedMonth || todayISO().slice(0, 7)}
             setMonth={setSelectedMonth}
-            selectedDate={selectedDate}
-            setSelectedDate={setSelectedDate}
             projects={projects}
-            onEdit={openEditProject}
-            onDelete={deleteProject}
-            onMarkReceived={markAsReceived}
-            onNewProject={openNewProject}
+            calendarEvents={calendarEvents}
+            activeCalendarTags={activeCalendarTags}
+            setActiveCalendarTags={setActiveCalendarTags}
+            selectedCalendarDate={selectedCalendarDate}
+            setSelectedCalendarDate={setSelectedCalendarDate}
+            isDayModalOpen={isDayModalOpen}
+            setIsDayModalOpen={setIsDayModalOpen}
+            onCreateCalendarEvent={createCalendarEvent}
+            onDeleteCalendarEvent={deleteCalendarEvent}
+            onEditProject={openEditProject}
           />
         ) : null}
       </section>
