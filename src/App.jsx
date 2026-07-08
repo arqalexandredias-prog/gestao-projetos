@@ -688,6 +688,90 @@ function withProjectSchedule(project, schedule) {
   };
 }
 
+
+const FILE_CATEGORY_OPTIONS = [
+  "Briefing",
+  "Contrato",
+  "Drive",
+  "Referência",
+  "Imagem",
+  "PDF",
+  "Orçamento",
+  "Projeto",
+  "Outros",
+];
+
+function emptyProjectFileForm() {
+  return {
+    title: "",
+    url: "",
+    category: "Drive",
+    note: "",
+  };
+}
+
+function normalizeUrl(value) {
+  const raw = String(value || "").trim();
+
+  if (!raw) return "";
+  if (/^(https?:\/\/|mailto:|tel:)/i.test(raw)) return raw;
+  if (raw.includes(".")) return `https://${raw}`;
+
+  return raw;
+}
+
+function normalizeFileCategory(category) {
+  return FILE_CATEGORY_OPTIONS.includes(category) ? category : "Outros";
+}
+
+function normalizeProjectFiles(files) {
+  if (!Array.isArray(files)) return [];
+
+  return files
+    .map((file, index) => ({
+      id: file.id || createId(),
+      title: String(file.title || "").trim(),
+      url: normalizeUrl(file.url),
+      category: normalizeFileCategory(file.category),
+      note: String(file.note || "").trim(),
+      favorite: Boolean(file.favorite),
+      position: Number.isFinite(Number(file.position)) ? Number(file.position) : index + 1,
+      createdAt: file.createdAt || new Date().toISOString(),
+      updatedAt: file.updatedAt || file.createdAt || new Date().toISOString(),
+    }))
+    .filter((file) => file.title || file.url)
+    .sort((a, b) => {
+      if (a.favorite !== b.favorite) return a.favorite ? -1 : 1;
+      if (a.position !== b.position) return a.position - b.position;
+
+      return String(b.createdAt || "").localeCompare(String(a.createdAt || ""));
+    });
+}
+
+function getProjectFiles(project) {
+  return normalizeProjectFiles(project?.files);
+}
+
+function getProjectFilesLabel(project) {
+  const files = getProjectFiles(project);
+
+  if (!files.length) return "Adicionar links";
+  if (files.length === 1) return "1 arquivo salvo";
+
+  return `${files.length} arquivos salvos`;
+}
+
+function withProjectFiles(project, files) {
+  const normalizedFiles = normalizeProjectFiles(files);
+
+  return {
+    ...project,
+    files: normalizedFiles,
+    filesTotal: normalizedFiles.length,
+    updatedAt: new Date().toISOString(),
+  };
+}
+
 function loadProjects() {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
@@ -955,10 +1039,14 @@ function ProjectSectionModal({
   onUpdateScheduleItemStatus,
   onDeleteScheduleItem,
   onCreateDefaultSchedule,
+  onAddFile,
+  onDeleteFile,
+  onToggleFileFavorite,
 }) {
   const [paymentForm, setPaymentForm] = useState(emptyPaymentForm);
   const [taskForm, setTaskForm] = useState(emptyTaskForm);
   const [scheduleForm, setScheduleForm] = useState(emptyScheduleForm);
+  const [fileForm, setFileForm] = useState(emptyProjectFileForm);
 
   const title = getProjectTitle(project);
   const client = getProjectClient(project);
@@ -973,6 +1061,8 @@ function ProjectSectionModal({
   const taskProgress = getTaskProgress(tasks);
   const schedule = getProjectSchedule(project);
   const scheduleProgress = getScheduleProgress(schedule);
+  const files = getProjectFiles(project);
+  const favoriteFilesCount = files.filter((file) => file.favorite).length;
 
   const titles = {
     pagamentos: "Pagamentos",
@@ -1014,6 +1104,16 @@ function ProjectSectionModal({
 
     if (saved) {
       setScheduleForm(emptyScheduleForm());
+    }
+  }
+
+  function submitFile(event) {
+    event.preventDefault();
+
+    const saved = onAddFile(project.id, fileForm);
+
+    if (saved) {
+      setFileForm(emptyProjectFileForm());
     }
   }
 
@@ -1451,9 +1551,131 @@ function ProjectSectionModal({
 
         {type === "arquivos" ? (
           <div className="project-section-popup-body">
-            <div className="project-section-empty">
-              A área de arquivos vai entrar aqui depois, para guardar links, referências e documentos.
+            <div className="project-payment-total">
+              <span>Arquivos e referências</span>
+              <strong>{files.length}</strong>
             </div>
+
+            <p className="project-payment-empty">
+              Guarde links de Drive, PDFs, imagens, contratos, orçamentos, referências e briefings
+              dentro deste projeto. Os arquivos ficam salvos junto com o projeto.
+            </p>
+
+            <form className="project-payment-form" onSubmit={submitFile}>
+              <label className="project-payment-form-wide">
+                Nome do arquivo ou referência
+                <input
+                  type="text"
+                  value={fileForm.title}
+                  placeholder="Ex: Briefing aprovado / Pasta Drive / Referência cozinha"
+                  onChange={(event) =>
+                    setFileForm((prev) => ({
+                      ...prev,
+                      title: event.target.value,
+                    }))
+                  }
+                />
+              </label>
+
+              <label>
+                Categoria
+                <select
+                  value={fileForm.category}
+                  onChange={(event) =>
+                    setFileForm((prev) => ({
+                      ...prev,
+                      category: event.target.value,
+                    }))
+                  }
+                >
+                  {FILE_CATEGORY_OPTIONS.map((category) => (
+                    <option key={category} value={category}>
+                      {category}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="project-payment-form-wide">
+                Link
+                <input
+                  type="text"
+                  value={fileForm.url}
+                  placeholder="Ex: https://drive.google.com/..."
+                  onChange={(event) =>
+                    setFileForm((prev) => ({
+                      ...prev,
+                      url: event.target.value,
+                    }))
+                  }
+                />
+              </label>
+
+              <label className="project-payment-form-wide">
+                Observação
+                <input
+                  type="text"
+                  value={fileForm.note}
+                  placeholder="Ex: versão final enviada ao cliente"
+                  onChange={(event) =>
+                    setFileForm((prev) => ({
+                      ...prev,
+                      note: event.target.value,
+                    }))
+                  }
+                />
+              </label>
+
+              <button type="submit">Adicionar arquivo</button>
+            </form>
+
+            {!files.length ? (
+              <div className="project-section-empty">
+                Nenhum arquivo ou link salvo ainda.
+              </div>
+            ) : (
+              <div className="project-payment-list">
+                {files.map((file) => (
+                  <article key={file.id} className="project-payment-item">
+                    <div>
+                      <strong>{file.favorite ? "★ " : ""}{file.title || file.url}</strong>
+
+                      <span>{file.category}</span>
+
+                      {file.url ? (
+                        <small>
+                          <a href={file.url} target="_blank" rel="noreferrer">
+                            Abrir link
+                          </a>
+                        </small>
+                      ) : null}
+
+                      {file.note ? <small>{file.note}</small> : null}
+                    </div>
+
+                    <div className="row-actions">
+                      <button type="button" onClick={() => onToggleFileFavorite(project.id, file.id)}>
+                        {file.favorite ? "Remover destaque" : "Destacar"}
+                      </button>
+
+                      <button
+                        type="button"
+                        className="danger"
+                        onClick={() => onDeleteFile(project.id, file.id)}
+                      >
+                        Excluir
+                      </button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
+
+            {favoriteFilesCount ? (
+              <p className="project-payment-empty">
+                {favoriteFilesCount} arquivo{favoriteFilesCount > 1 ? "s" : ""} em destaque aparece{favoriteFilesCount > 1 ? "m" : ""} primeiro na lista.
+              </p>
+            ) : null}
           </div>
         ) : null}
       </section>
@@ -1475,6 +1697,9 @@ function ProjectDetailModal({
   onUpdateScheduleItemStatus,
   onDeleteScheduleItem,
   onCreateDefaultSchedule,
+  onAddFile,
+  onDeleteFile,
+  onToggleFileFavorite,
 }) {
   const [hideValues, setHideValues] = useState(false);
   const [activeSection, setActiveSection] = useState(null);
@@ -1653,7 +1878,7 @@ function ProjectDetailModal({
             <button type="button" onClick={() => setActiveSection("arquivos")}>
               <span>📁</span>
               <strong>Arquivos</strong>
-              <small>Em breve</small>
+              <small>{getProjectFilesLabel(project)}</small>
             </button>
 
             <button type="button" onClick={() => setActiveSection("orcamentos")}>
@@ -1693,6 +1918,9 @@ function ProjectDetailModal({
             onUpdateScheduleItemStatus={onUpdateScheduleItemStatus}
             onDeleteScheduleItem={onDeleteScheduleItem}
             onCreateDefaultSchedule={onCreateDefaultSchedule}
+            onAddFile={onAddFile}
+            onDeleteFile={onDeleteFile}
+            onToggleFileFavorite={onToggleFileFavorite}
           />
         ) : null}
       </section>
@@ -2787,6 +3015,8 @@ export default function App() {
       scheduleProgress: existingProject?.scheduleProgress || 0,
       scheduleTotal: existingProject?.scheduleTotal || 0,
       scheduleDone: existingProject?.scheduleDone || 0,
+      files: getProjectFiles(existingProject),
+      filesTotal: getProjectFiles(existingProject).length,
       createdAt: existingProject?.createdAt || existingProject?.updatedAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -3119,6 +3349,82 @@ export default function App() {
           }));
 
           return withProjectSchedule(project, defaultSchedule);
+        })
+      )
+    );
+  }
+
+
+  function addProjectFile(projectId, fileFormPayload) {
+    const title = String(fileFormPayload.title || "").trim();
+    const url = normalizeUrl(fileFormPayload.url);
+    const note = String(fileFormPayload.note || "").trim();
+
+    if (!title && !url) {
+      window.alert("Informe o nome do arquivo ou um link.");
+      return false;
+    }
+
+    setProjects((current) =>
+      normalizeProjectCodes(
+        current.map((project) => {
+          if (project.id !== projectId) return project;
+
+          const currentFiles = getProjectFiles(project);
+          const newFile = {
+            id: createId(),
+            title: title || url,
+            url,
+            category: normalizeFileCategory(fileFormPayload.category),
+            note,
+            favorite: false,
+            position: currentFiles.length + 1,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+
+          return withProjectFiles(project, [...currentFiles, newFile]);
+        })
+      )
+    );
+
+    return true;
+  }
+
+  function toggleProjectFileFavorite(projectId, fileId) {
+    setProjects((current) =>
+      normalizeProjectCodes(
+        current.map((project) => {
+          if (project.id !== projectId) return project;
+
+          const nextFiles = getProjectFiles(project).map((file) =>
+            file.id === fileId
+              ? {
+                  ...file,
+                  favorite: !file.favorite,
+                  updatedAt: new Date().toISOString(),
+                }
+              : file
+          );
+
+          return withProjectFiles(project, nextFiles);
+        })
+      )
+    );
+  }
+
+  function deleteProjectFile(projectId, fileId) {
+    const confirmDelete = window.confirm("Excluir este arquivo/link do projeto?");
+    if (!confirmDelete) return;
+
+    setProjects((current) =>
+      normalizeProjectCodes(
+        current.map((project) => {
+          if (project.id !== projectId) return project;
+
+          const nextFiles = getProjectFiles(project).filter((file) => file.id !== fileId);
+
+          return withProjectFiles(project, nextFiles);
         })
       )
     );
@@ -3525,6 +3831,9 @@ export default function App() {
           onUpdateScheduleItemStatus={updateProjectScheduleStatus}
           onDeleteScheduleItem={deleteProjectScheduleItem}
           onCreateDefaultSchedule={createDefaultProjectSchedule}
+          onAddFile={addProjectFile}
+          onDeleteFile={deleteProjectFile}
+          onToggleFileFavorite={toggleProjectFileFavorite}
         />
       ) : null}
     </main>
