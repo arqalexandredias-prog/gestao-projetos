@@ -1,11 +1,13 @@
-﻿// GESTAO_PROJETOS_PWA_V2
-const CACHE_NAME = "gestao-projetos-pwa-v2";
+﻿// GESTAO_PROJETOS_PWA_V3
+const CACHE_NAME = "gestao-projetos-pwa-v3";
 const APP_SHELL = [
   "/",
   "/manifest.webmanifest",
+  "/favicon.ico",
+  "/favicon.png",
+  "/apple-touch-icon.png",
   "/icons/icon-192.png",
-  "/icons/icon-512.png",
-  "/favicon.png"
+  "/icons/icon-512.png"
 ];
 
 self.addEventListener("install", (event) => {
@@ -24,9 +26,7 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
-
   const url = new URL(event.request.url);
-
   if (url.origin !== self.location.origin) return;
 
   event.respondWith(

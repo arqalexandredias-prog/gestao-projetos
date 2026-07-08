@@ -1,4 +1,4 @@
-﻿// GESTAO_PROJETOS_PWA_V2
+﻿// GESTAO_PROJETOS_PWA_V3
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
     navigator.serviceWorker
