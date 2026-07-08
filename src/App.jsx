@@ -1104,9 +1104,9 @@ function ColorPicker({ value, onChange }) {
   );
 }
 
-function SummaryCard({ icon, label, value, helper, tone = "neutral" }) {
-  return (
-    <article className={`summary-card summary-card-${tone}`}>
+function SummaryCard({ icon, label, value, helper, tone = "neutral", onClick }) {
+  const content = (
+    <>
       <div className="summary-icon">{icon}</div>
 
       <div>
@@ -1114,8 +1114,23 @@ function SummaryCard({ icon, label, value, helper, tone = "neutral" }) {
         <strong>{value}</strong>
         {helper ? <small>{helper}</small> : null}
       </div>
-    </article>
+    </>
   );
+
+  if (onClick) {
+    return (
+      <button
+        type="button"
+        className={`summary-card summary-card-${tone}`}
+        onClick={onClick}
+        style={{ width: "100%", textAlign: "left", cursor: "pointer" }}
+      >
+        {content}
+      </button>
+    );
+  }
+
+  return <article className={`summary-card summary-card-${tone}`}>{content}</article>;
 }
 
 function ProjectTable({ projects, onEdit, onDelete, onMarkReceived, emptyMessage }) {
@@ -3485,16 +3500,17 @@ export default function App() {
   }, [projects, search, statusFilter]);
 
   const summary = useMemo(() => {
-    const soldProjects = monthProjects.filter(isSold);
+    const soldMonthProjects = monthProjects.filter(isSold);
+    const soldProjects = projects.filter(isSold);
 
     return {
-      sold: soldProjects.reduce((sum, project) => sum + Number(project.amount || 0), 0),
+      sold: soldMonthProjects.reduce((sum, project) => sum + Number(project.amount || 0), 0),
       commission: soldProjects.reduce((sum, project) => sum + getCommission(project), 0),
       received: soldProjects.reduce((sum, project) => sum + getReceivedCommission(project), 0),
       pending: soldProjects.reduce((sum, project) => sum + getPendingCommission(project), 0),
-      active: monthProjects.filter(isActiveProject).length,
+      active: projects.filter(isActiveProject).length,
     };
-  }, [monthProjects]);
+  }, [monthProjects, projects]);
 
   const nextProjects = useMemo(() => {
     return [...projects]
@@ -3622,7 +3638,7 @@ export default function App() {
         if (dateA !== dateB) return dateA.localeCompare(dateB);
         return getProjectOrderValue(b.project).localeCompare(getProjectOrderValue(a.project));
       })
-      .slice(0, 5);
+      .slice(0, 8);
 
     const focusItems = [
       ...urgentTasks.slice(0, 3),
@@ -4502,72 +4518,50 @@ export default function App() {
                 icon="▢"
                 label="Vendido no mês"
                 value={formatCurrency(summary.sold)}
-                helper="Sem orçamentos e cancelados"
+                helper="Abrir projetos"
+                onClick={() => {
+                  setSearch("");
+                  setStatusFilter("Todos");
+                  setActivePage("projetos");
+                }}
               />
 
               <SummaryCard
                 icon="▱"
                 label="Projetos ativos"
                 value={String(summary.active)}
-                helper="Em aberto no período"
+                helper="Ver lista ativa"
+                onClick={() => {
+                  setSearch("");
+                  setStatusFilter("Ativos");
+                  setActivePage("projetos");
+                }}
               />
 
               <SummaryCard
                 icon="↓"
                 label="Recebido"
                 value={formatCurrency(summary.received)}
-                helper="Comissão já recebida"
+                helper="Comissões recebidas"
                 tone="received"
+                onClick={() => {
+                  setSearch("");
+                  setStatusFilter("Recebido");
+                  setActivePage("projetos");
+                }}
               />
 
               <SummaryCard
                 icon="↑"
                 label="A receber"
                 value={formatCurrency(summary.pending)}
-                helper="Comissão pendente"
+                helper="Pendentes e parciais"
                 tone="pending"
-              />
-            </section>
-
-            <section className="summary-grid">
-              <SummaryCard
-                icon="✓"
-                label="Tarefas abertas"
-                value={String(dashboardHub.openTasks)}
-                helper={`${dashboardHub.tasksDone}/${dashboardHub.tasksTotal} concluídas`}
-                tone={dashboardHub.urgentTasks > 0 ? "pending" : "neutral"}
-              />
-
-              <SummaryCard
-                icon="◷"
-                label="Etapas em aberto"
-                value={String(dashboardHub.openSchedule)}
-                helper={`${dashboardHub.scheduleDone}/${dashboardHub.scheduleTotal} etapas concluídas`}
-                tone={dashboardHub.urgentSchedule > 0 ? "pending" : "neutral"}
-              />
-
-              <SummaryCard
-                icon="📁"
-                label="Arquivos salvos"
-                value={String(dashboardHub.filesTotal)}
-                helper="Links, briefing, contratos e referências"
-              />
-
-              <SummaryCard
-                icon="🧾"
-                label="Orçamentos"
-                value={formatCurrency(dashboardHub.budgetApprovedTotal)}
-                helper={`${dashboardHub.budgetItemsTotal} cadastrados · ${formatCurrency(
-                  dashboardHub.budgetGrandTotal
-                )} total`}
-                tone="received"
-              />
-
-              <SummaryCard
-                icon="✍"
-                label="Diário"
-                value={String(dashboardHub.diaryTotal)}
-                helper={`${dashboardHub.pinnedDiaryTotal} registros fixados`}
+                onClick={() => {
+                  setSearch("");
+                  setStatusFilter("Ativos");
+                  setActivePage("projetos");
+                }}
               />
             </section>
 
@@ -4584,33 +4578,82 @@ export default function App() {
                   </button>
                 </div>
 
-                <div className="project-lines">
+                <div
+                  className="project-lines"
+                  style={{
+                    display: "grid",
+                    gap: 8,
+                  }}
+                >
                   {dashboardHub.projectCards.length ? (
-                    dashboardHub.projectCards.map((item) => (
-                      <button
-                        type="button"
-                        className="launch-line"
-                        key={item.project.id}
-                        onClick={() => openProjectDetails(item.project, item.project.projectCode)}
-                      >
-                        <div style={{ display: "grid", gap: 8, minWidth: 0 }}>
-                          <strong>{getProjectClient(item.project)}</strong>
-                          <span>{getProjectTitle(item.project)}</span>
+                    <>
+                      {dashboardHub.projectCards.map((item) => {
+                        const deadlineLabel = item.deadline ? formatDaysUntil(item.deadline) : "Sem prazo";
 
-                          <div className="progress-track" style={{ height: 6, marginTop: 2 }}>
-                            <i style={{ width: `${item.operationalProgress}%` }} />
-                          </div>
+                        return (
+                          <button
+                            type="button"
+                            className="launch-line"
+                            key={item.project.id}
+                            onClick={() => openProjectDetails(item.project, item.project.projectCode)}
+                            style={{
+                              display: "grid",
+                              gridTemplateColumns: "auto minmax(0, 1fr) auto",
+                              alignItems: "center",
+                              gap: 10,
+                              padding: "12px 14px",
+                              minHeight: "auto",
+                            }}
+                          >
+                            <span
+                              style={{
+                                width: 8,
+                                height: 32,
+                                borderRadius: 999,
+                                backgroundColor: item.project.color || EVENT_COLORS[0],
+                              }}
+                            />
 
-                          <small style={{ color: "var(--text-soft)" }}>
-                            Tarefas {item.taskProgress.percent}% · Cronograma {item.scheduleProgress.percent}% · {item.filesTotal} arquivo{item.filesTotal === 1 ? "" : "s"}
-                          </small>
-                        </div>
+                            <div style={{ minWidth: 0 }}>
+                              <strong
+                                style={{
+                                  display: "block",
+                                  whiteSpace: "nowrap",
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis",
+                                }}
+                              >
+                                {getProjectClient(item.project)}
+                              </strong>
 
-                        <span>
-                          {item.deadline ? formatDaysUntil(item.deadline) : `${item.operationalProgress}%`}
-                        </span>
-                      </button>
-                    ))
+                              <span
+                                style={{
+                                  display: "block",
+                                  whiteSpace: "nowrap",
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis",
+                                }}
+                              >
+                                {item.project.projectCode || "Sem código"} · {getProjectTitle(item.project)}
+                              </span>
+                            </div>
+
+                            <span style={{ whiteSpace: "nowrap" }}>{deadlineLabel}</span>
+                          </button>
+                        );
+                      })}
+
+                      {summary.active > dashboardHub.projectCards.length ? (
+                        <button
+                          type="button"
+                          className="soft-empty"
+                          onClick={() => setActivePage("projetos")}
+                          style={{ cursor: "pointer" }}
+                        >
+                          +{summary.active - dashboardHub.projectCards.length} projetos ativos na aba Projetos
+                        </button>
+                      ) : null}
+                    </>
                   ) : (
                     <div className="soft-empty">Nenhum projeto ativo para acompanhar agora.</div>
                   )}
@@ -4690,51 +4733,6 @@ export default function App() {
                     ) : (
                       <div className="soft-empty">Nenhum próximo lançamento cadastrado.</div>
                     )}
-                  </div>
-                </div>
-
-                <div className="panel side-panel">
-                  <div className="panel-header compact">
-                    <div>
-                      <p>Atenção</p>
-                      <h2>Comissões a receber</h2>
-                    </div>
-
-                    <button type="button" onClick={() => setActivePage("projetos")}>
-                      Ver tudo
-                    </button>
-                  </div>
-
-                  <div className="project-lines">
-                    {pendingProjects.length ? (
-                      pendingProjects.map((project) => (
-                        <ProjectListItem key={project.id} project={project} onEdit={openEditProject} />
-                      ))
-                    ) : (
-                      <div className="soft-empty">Nenhuma comissão pendente neste período.</div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="panel side-panel">
-                  <div className="panel-header compact">
-                    <div>
-                      <p>Progresso</p>
-                      <h2>Recebimento do mês</h2>
-                    </div>
-                  </div>
-
-                  <div className="progress-card">
-                    <div>
-                      <strong>{progressPercent}%</strong>
-                      <span>
-                        {formatCurrency(summary.received)} de {formatCurrency(summary.commission)}
-                      </span>
-                    </div>
-
-                    <div className="progress-track">
-                      <i style={{ width: `${progressPercent}%` }} />
-                    </div>
                   </div>
                 </div>
               </aside>
