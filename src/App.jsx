@@ -1285,7 +1285,7 @@ function ProjectMobileList({ projects, emptyMessage, onOpenDetails }) {
     <div className="projects-premium-list" style={{ borderRadius: 24, overflow: "hidden" }}>
       <div
         className="projects-premium-head"
-        style={{ padding: "12px 18px", minHeight: 48, fontSize: "0.8rem", letterSpacing: "0.16em" }}
+        style={{ padding: "9px 16px", minHeight: 36, fontSize: "0.68rem", letterSpacing: "0.14em" }}
       >
         <span>Código</span>
         <span>Projeto</span>
@@ -1301,21 +1301,21 @@ function ProjectMobileList({ projects, emptyMessage, onOpenDetails }) {
             className="projects-premium-row"
             onClick={() => onOpenDetails(project, code)}
             style={{
-              minHeight: 92,
-              padding: "14px 18px",
-              gap: 12,
+              minHeight: 68,
+              padding: "9px 16px",
+              gap: 10,
             }}
           >
-            <span className="projects-premium-code" style={{ fontSize: "0.92rem" }}>{code}</span>
+            <span className="projects-premium-code" style={{ fontSize: "0.78rem" }}>{code}</span>
 
             <span className="projects-premium-info" style={{ gap: 2 }}>
-              <strong style={{ fontSize: "0.98rem", lineHeight: 1.12 }}>{getProjectTitle(project)}</strong>
-              <small style={{ fontSize: "0.74rem", lineHeight: 1.08 }}>{getProjectClient(project)}</small>
+              <strong style={{ fontSize: "0.84rem", lineHeight: 1.08 }}>{getProjectTitle(project)}</strong>
+              <small style={{ fontSize: "0.68rem", lineHeight: 1.05 }}>{getProjectClient(project)}</small>
             </span>
 
             <span
               className="projects-premium-status"
-              style={{ backgroundColor: project.color || EVENT_COLORS[0], width: 14, height: 14 }}
+              style={{ backgroundColor: project.color || EVENT_COLORS[0], width: 10, height: 10 }}
             />
           </button>
         );
@@ -4902,14 +4902,14 @@ export default function App() {
         ) : null}
 
         {activePage === "projetos" ? (
-          <section className="page-section">
+          <section className="page-section" data-build-marker="PROJETOS_SEM_CABECALHO_V2">
             <section
               style={{
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "flex-start",
-                marginBottom: 12,
-                padding: "0 6px 0 0",
+                marginBottom: 8,
+                padding: "0 4px 0 0",
               }}
             >
               <button
@@ -4918,11 +4918,11 @@ export default function App() {
                 onClick={() => openNewProject()}
                 style={{
                   width: "fit-content",
-                  minWidth: 132,
-                  minHeight: 32,
-                  padding: "0 14px",
-                  borderRadius: 14,
-                  fontSize: "0.72rem",
+                  minWidth: 118,
+                  minHeight: 30,
+                  padding: "0 12px",
+                  borderRadius: 13,
+                  fontSize: "0.68rem",
                   letterSpacing: "-0.02em",
                   boxShadow: "0 8px 18px rgba(45, 29, 23, 0.12)",
                 }}
@@ -4931,7 +4931,7 @@ export default function App() {
               </button>
             </section>
 
-            <div className="filters" style={{ marginTop: 0 }}>
+            <div className="filters" style={{ marginTop: 0, padding: 14, borderRadius: 22 }}>
               <input
                 type="search"
                 value={search}
