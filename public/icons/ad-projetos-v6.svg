@@ -1,0 +1,8 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="110" fill="#f6efe4"/>
+  <rect x="42" y="42" width="428" height="428" rx="118" fill="#2d1d17"/>
+  <rect x="330" y="82" width="94" height="94" rx="32" fill="#be7254"/>
+  <text x="256" y="286" text-anchor="middle" font-family="Georgia,serif" font-size="156" font-weight="700" fill="#fff8ee">AD</text>
+  <text x="256" y="362" text-anchor="middle" font-family="Arial,sans-serif" font-size="32" font-weight="800" letter-spacing="3" fill="#dcc3b3">PROJETOS</text>
+</svg>
+

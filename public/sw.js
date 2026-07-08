@@ -1,9 +1,7 @@
-﻿// GESTAO_PROJETOS_PWA_V5
-const CACHE_NAME = "ad-projetos-pwa-v5";
+﻿// GESTAO_PROJETOS_PWA_V6
+const CACHE_NAME = "ad-projetos-pwa-v6";
 
-self.addEventListener("install", (event) => {
-  self.skipWaiting();
-});
+self.addEventListener("install", () => self.skipWaiting());
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(

@@ -1,9 +1,9 @@
 ﻿{
-  "id": "/ad-gestao-projetos-v5",
+  "id": "/ad-projetos-v6",
   "name": "Alexandre Dias | GestÃ£o de Projetos",
   "short_name": "AD Projetos",
   "description": "Sistema premium para gestÃ£o de projetos de interiores.",
-  "start_url": "/?app=ad-projetos-v5",
+  "start_url": "/?pwa=ad-projetos-v6",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait-primary",
@@ -12,15 +12,9 @@
   "lang": "pt-BR",
   "categories": ["business", "productivity"],
   "icons": [
-    { "src": "/icons/ad-projetos-72-v5.png", "sizes": "72x72", "type": "image/png", "purpose": "any" },
-    { "src": "/icons/ad-projetos-96-v5.png", "sizes": "96x96", "type": "image/png", "purpose": "any" },
-    { "src": "/icons/ad-projetos-128-v5.png", "sizes": "128x128", "type": "image/png", "purpose": "any" },
-    { "src": "/icons/ad-projetos-144-v5.png", "sizes": "144x144", "type": "image/png", "purpose": "any" },
-    { "src": "/icons/ad-projetos-152-v5.png", "sizes": "152x152", "type": "image/png", "purpose": "any" },
-    { "src": "/icons/ad-projetos-192-v5.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "/icons/ad-projetos-384-v5.png", "sizes": "384x384", "type": "image/png", "purpose": "any" },
-    { "src": "/icons/ad-projetos-512-v5.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "/icons/ad-projetos-192-v5.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
-    { "src": "/icons/ad-projetos-512-v5.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    { "src": "/icons/ad-projetos-192-v6.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/ad-projetos-512-v6.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/ad-projetos-192-v6.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/icons/ad-projetos-512-v6.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ]
 }
