@@ -1105,14 +1105,67 @@ function ColorPicker({ value, onChange }) {
 }
 
 function SummaryCard({ icon, label, value, helper, tone = "neutral", onClick }) {
+  const cardStyle = {
+    width: "100%",
+    minHeight: 118,
+    padding: "16px 16px 14px",
+    textAlign: "left",
+    cursor: onClick ? "pointer" : "default",
+    display: "grid",
+    alignContent: "space-between",
+    gap: 12,
+    borderRadius: 24,
+  };
+
   const content = (
     <>
-      <div className="summary-icon">{icon}</div>
+      <div
+        className="summary-icon"
+        style={{
+          width: 38,
+          height: 38,
+          marginBottom: 8,
+          fontSize: "0.85rem",
+        }}
+      >
+        {icon}
+      </div>
 
       <div>
-        <span>{label}</span>
-        <strong>{value}</strong>
-        {helper ? <small>{helper}</small> : null}
+        <span
+          style={{
+            display: "block",
+            marginBottom: 7,
+            fontSize: "0.86rem",
+            lineHeight: 1.15,
+          }}
+        >
+          {label}
+        </span>
+
+        <strong
+          style={{
+            display: "block",
+            fontSize: "1.35rem",
+            lineHeight: 1.05,
+            letterSpacing: "-0.05em",
+          }}
+        >
+          {value}
+        </strong>
+
+        {helper ? (
+          <small
+            style={{
+              display: "block",
+              marginTop: 8,
+              fontSize: "0.78rem",
+              lineHeight: 1.2,
+            }}
+          >
+            {helper}
+          </small>
+        ) : null}
       </div>
     </>
   );
@@ -1123,14 +1176,18 @@ function SummaryCard({ icon, label, value, helper, tone = "neutral", onClick }) 
         type="button"
         className={`summary-card summary-card-${tone}`}
         onClick={onClick}
-        style={{ width: "100%", textAlign: "left", cursor: "pointer" }}
+        style={cardStyle}
       >
         {content}
       </button>
     );
   }
 
-  return <article className={`summary-card summary-card-${tone}`}>{content}</article>;
+  return (
+    <article className={`summary-card summary-card-${tone}`} style={cardStyle}>
+      {content}
+    </article>
+  );
 }
 
 function ProjectTable({ projects, onEdit, onDelete, onMarkReceived, emptyMessage }) {
@@ -3638,7 +3695,7 @@ export default function App() {
         if (dateA !== dateB) return dateA.localeCompare(dateB);
         return getProjectOrderValue(b.project).localeCompare(getProjectOrderValue(a.project));
       })
-      .slice(0, 8);
+      .slice(0, 5);
 
     const focusItems = [
       ...urgentTasks.slice(0, 3),
@@ -4507,13 +4564,27 @@ export default function App() {
 
         {activePage === "resumo" ? (
           <section className="page-section">
-            <section className="hero welcome-card">
-              <h1>
+            <section
+              className="hero welcome-card"
+              style={{
+                minHeight: "auto",
+                padding: "18px 22px",
+                marginBottom: 16,
+              }}
+            >
+              <h1
+                style={{
+                  margin: 0,
+                  fontSize: "clamp(2.05rem, 8.5vw, 3.65rem)",
+                  lineHeight: 0.95,
+                  letterSpacing: "-0.07em",
+                }}
+              >
                 Vamos criar algo incrível, <span>Alexandre?</span>
               </h1>
             </section>
 
-            <section className="summary-grid">
+            <section className="summary-grid" style={{ gap: 12, marginBottom: 18 }}>
               <SummaryCard
                 icon="▢"
                 label="Vendido no mês"
@@ -4565,12 +4636,18 @@ export default function App() {
               />
             </section>
 
-            <section className="dashboard-grid">
-              <div className="panel side-panel">
-                <div className="panel-header compact">
+            <section className="dashboard-grid" style={{ gap: 14, marginTop: 4 }}>
+              <div
+                className="panel side-panel"
+                style={{
+                  padding: 20,
+                  borderRadius: 28,
+                }}
+              >
+                <div className="panel-header compact" style={{ marginBottom: 14 }}>
                   <div>
                     <p>Central</p>
-                    <h2>Projetos em andamento</h2>
+                    <h2 style={{ fontSize: "1.55rem", lineHeight: 1.05 }}>Projetos em andamento</h2>
                   </div>
 
                   <button type="button" onClick={() => setActivePage("projetos")}>
@@ -4582,7 +4659,10 @@ export default function App() {
                   className="project-lines"
                   style={{
                     display: "grid",
-                    gap: 8,
+                    gap: 7,
+                    maxHeight: 330,
+                    overflowY: "auto",
+                    paddingRight: 2,
                   }}
                 >
                   {dashboardHub.projectCards.length ? (
@@ -4600,15 +4680,16 @@ export default function App() {
                               display: "grid",
                               gridTemplateColumns: "auto minmax(0, 1fr) auto",
                               alignItems: "center",
-                              gap: 10,
-                              padding: "12px 14px",
-                              minHeight: "auto",
+                              gap: 9,
+                              padding: "8px 10px",
+                              minHeight: 54,
+                              borderRadius: 18,
                             }}
                           >
                             <span
                               style={{
-                                width: 8,
-                                height: 32,
+                                width: 6,
+                                height: 30,
                                 borderRadius: 999,
                                 backgroundColor: item.project.color || EVENT_COLORS[0],
                               }}
@@ -4621,6 +4702,11 @@ export default function App() {
                                   whiteSpace: "nowrap",
                                   overflow: "hidden",
                                   textOverflow: "ellipsis",
+                                  fontSize: "0.8rem",
+                                  lineHeight: 1.15,
+                                  marginTop: 3,
+                                  fontSize: "0.95rem",
+                                  lineHeight: 1.1,
                                 }}
                               >
                                 {getProjectClient(item.project)}
@@ -4638,7 +4724,7 @@ export default function App() {
                               </span>
                             </div>
 
-                            <span style={{ whiteSpace: "nowrap" }}>{deadlineLabel}</span>
+                            <span style={{ whiteSpace: "nowrap", fontSize: "0.82rem" }}>{deadlineLabel}</span>
                           </button>
                         );
                       })}
@@ -4648,24 +4734,32 @@ export default function App() {
                           type="button"
                           className="soft-empty"
                           onClick={() => setActivePage("projetos")}
-                          style={{ cursor: "pointer" }}
+                          style={{ cursor: "pointer", padding: "10px 12px", borderRadius: 18 }}
                         >
                           +{summary.active - dashboardHub.projectCards.length} projetos ativos na aba Projetos
                         </button>
                       ) : null}
                     </>
                   ) : (
-                    <div className="soft-empty">Nenhum projeto ativo para acompanhar agora.</div>
+                    <div
+                      className="soft-empty"
+                      style={{ padding: "14px 12px", minHeight: 0, borderRadius: 18, fontSize: "0.86rem" }}
+                    >
+                      Nenhum projeto ativo para acompanhar agora.
+                    </div>
                   )}
                 </div>
               </div>
 
               <aside className="side-stack">
-                <div className="panel side-panel">
-                  <div className="panel-header compact">
+                <div
+                  className="panel side-panel"
+                  style={{ padding: 20, borderRadius: 28 }}
+                >
+                  <div className="panel-header compact" style={{ marginBottom: 14 }}>
                     <div>
                       <p>Atenção</p>
-                      <h2>Prioridades do dia</h2>
+                      <h2 style={{ fontSize: "1.45rem", lineHeight: 1.05 }}>Prioridades do dia</h2>
                     </div>
 
                     <button type="button" onClick={() => setActivePage("calendario")}>
@@ -4681,6 +4775,7 @@ export default function App() {
                           className="launch-line"
                           key={item.id}
                           onClick={() => openProjectDetails(item.project, item.project.projectCode)}
+                          style={{ padding: "9px 10px", minHeight: 54, borderRadius: 18 }}
                         >
                           <div>
                             <strong>
@@ -4696,16 +4791,24 @@ export default function App() {
                         </button>
                       ))
                     ) : (
-                      <div className="soft-empty">Nenhuma tarefa, etapa ou orçamento urgente agora.</div>
+                      <div
+                        className="soft-empty"
+                        style={{ padding: "14px 12px", minHeight: 0, borderRadius: 18, fontSize: "0.86rem" }}
+                      >
+                        Nenhuma tarefa, etapa ou orçamento urgente agora.
+                      </div>
                     )}
                   </div>
                 </div>
 
-                <div className="panel side-panel">
-                  <div className="panel-header compact">
+                <div
+                  className="panel side-panel"
+                  style={{ padding: 20, borderRadius: 28 }}
+                >
+                  <div className="panel-header compact" style={{ marginBottom: 14 }}>
                     <div>
                       <p>Próximos</p>
-                      <h2>Entregas e lançamentos</h2>
+                      <h2 style={{ fontSize: "1.45rem", lineHeight: 1.05 }}>Entregas e lançamentos</h2>
                     </div>
 
                     <button type="button" onClick={() => setActivePage("calendario")}>
@@ -4721,6 +4824,7 @@ export default function App() {
                           className="launch-line"
                           key={project.id}
                           onClick={() => openProjectDetails(project, project.projectCode)}
+                          style={{ padding: "9px 10px", minHeight: 54, borderRadius: 18 }}
                         >
                           <div>
                             <strong>{project.client || "Cliente sem nome"}</strong>
@@ -4731,7 +4835,12 @@ export default function App() {
                         </button>
                       ))
                     ) : (
-                      <div className="soft-empty">Nenhum próximo lançamento cadastrado.</div>
+                      <div
+                        className="soft-empty"
+                        style={{ padding: "14px 12px", minHeight: 0, borderRadius: 18, fontSize: "0.86rem" }}
+                      >
+                        Nenhum próximo lançamento cadastrado.
+                      </div>
                     )}
                   </div>
                 </div>
