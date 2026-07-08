@@ -299,34 +299,33 @@ function getProjectCodeNumber(value) {
   return match ? Number(match[1]) : 0;
 }
 
+function getProjectOrderValue(project) {
+  return [
+    project.date || "",
+    project.deliveryDate || "",
+    project.updatedAt || "",
+    project.id || "",
+  ].join("|");
+}
+
 function normalizeProjectCodes(projects) {
-  const used = new Set();
-  let nextNumber = 1;
+  const ordered = [...projects].sort((a, b) => {
+    const orderA = getProjectOrderValue(a);
+    const orderB = getProjectOrderValue(b);
 
-  return projects.map((project) => {
-    const normalizedCode = normalizeProjectCode(project.projectCode);
-    let code = normalizedCode;
-
-    if (!code || used.has(code)) {
-      while (used.has(formatProjectCode(nextNumber))) {
-        nextNumber += 1;
-      }
-
-      code = formatProjectCode(nextNumber);
-    }
-
-    used.add(code);
-
-    const codeNumber = getProjectCodeNumber(code);
-    if (codeNumber >= nextNumber) {
-      nextNumber = codeNumber + 1;
-    }
-
-    return {
-      ...project,
-      projectCode: code,
-    };
+    return orderA.localeCompare(orderB);
   });
+
+  const codeById = new Map();
+
+  ordered.forEach((project, index) => {
+    codeById.set(project.id, formatProjectCode(index + 1));
+  });
+
+  return projects.map((project, index) => ({
+    ...project,
+    projectCode: codeById.get(project.id) || normalizeProjectCode(project.projectCode) || getProjectCode(index),
+  }));
 }
 
 function getNextProjectCode(projects) {
@@ -1768,7 +1767,7 @@ export default function App() {
   const visibleProjects = useMemo(() => {
     const term = search.trim().toLowerCase();
 
-    return monthProjects
+    return projects
       .filter((project) => {
         const displayStatus = getDisplayStatus(project);
 
@@ -1785,24 +1784,24 @@ export default function App() {
         if (!term) return true;
 
         return [
-          project.projectCode,
-          project.date,
-          project.deliveryDate,
           project.development,
           project.client,
-          project.clientEmail,
-          project.clientPhone,
           project.consultant,
           project.project,
-          displayStatus,
-          project.note,
         ]
           .join(" ")
           .toLowerCase()
           .includes(term);
       })
-      .sort((a, b) => b.date.localeCompare(a.date));
-  }, [monthProjects, search, statusFilter]);
+      .sort((a, b) => {
+        const codeA = getProjectCodeNumber(a.projectCode);
+        const codeB = getProjectCodeNumber(b.projectCode);
+
+        if (codeA !== codeB) return codeB - codeA;
+
+        return getProjectOrderValue(b).localeCompare(getProjectOrderValue(a));
+      });
+  }, [projects, search, statusFilter]);
 
   const summary = useMemo(() => {
     const soldProjects = monthProjects.filter(isSold);
@@ -2272,14 +2271,9 @@ export default function App() {
               <input
                 type="search"
                 value={search}
-                placeholder="Buscar por cliente, empreendimento, consultor, telefone, e-mail ou código..."
+                placeholder="Buscar por nome do cliente ou projeto..."
                 onChange={(event) => setSearch(event.target.value)}
               />
-
-              <button type="button" className="calendar-open-button" onClick={() => setActivePage("calendario")}>
-                <span>📅</span>
-                {formatMonthLabel(selectedMonth)}
-              </button>
 
               <div className="project-filter-select">
                 <span>Exibindo:</span>
@@ -2292,10 +2286,6 @@ export default function App() {
                   ))}
                 </select>
               </div>
-
-              <button type="button" onClick={() => setSelectedMonth("")}>
-                Ver todos
-              </button>
             </div>
 
             <ProjectMobileList
