@@ -1066,14 +1066,55 @@ function getTagLabel(tagId) {
   return CALENDAR_TAGS.find((tag) => tag.id === tagId)?.label || tagId;
 }
 
-function BrandLogo() {
+function BrandLogo({ compact = false } = {}) {
   return (
-    <div className="brand-wordmark">
-      <div className="brand-copy">
-        <strong>
+    <div
+      className="brand-wordmark"
+      style={
+        compact
+          ? {
+              minHeight: "auto",
+              gap: 0,
+            }
+          : undefined
+      }
+    >
+      <div
+        className="brand-copy"
+        style={
+          compact
+            ? {
+                gap: 4,
+              }
+            : undefined
+        }
+      >
+        <strong
+          style={
+            compact
+              ? {
+                  fontSize: "clamp(0.96rem, 4vw, 1.12rem)",
+                  lineHeight: 1,
+                  letterSpacing: "-0.05em",
+                }
+              : undefined
+          }
+        >
           Alexandre Dias <em>| Interiores</em>
         </strong>
-        <span>Gestão de Projetos</span>
+        <span
+          style={
+            compact
+              ? {
+                  fontSize: "0.46rem",
+                  letterSpacing: "0.28em",
+                  lineHeight: 1,
+                }
+              : undefined
+          }
+        >
+          Gestão de Projetos
+        </span>
       </div>
     </div>
   );
@@ -3305,7 +3346,7 @@ function CalendarPage({
   const calendarGridStyle = calendarView === "dia" ? { gridTemplateColumns: "1fr" } : undefined;
 
   const viewButtonStyle = (isActive) => ({
-    minHeight: 34,
+    minHeight: 30,
     borderRadius: 999,
     border: `1px solid ${isActive ? "rgba(45, 29, 23, 0.22)" : "rgba(45, 29, 23, 0.10)"}`,
     background: isActive
@@ -3313,40 +3354,40 @@ function CalendarPage({
       : "rgba(255, 252, 245, 0.72)",
     color: isActive ? "#fff8ee" : "rgba(72, 52, 43, 0.78)",
     boxShadow: isActive ? "0 10px 22px rgba(45, 29, 23, 0.14)" : "none",
-    fontSize: "0.76rem",
+    fontSize: "0.68rem",
     fontWeight: 800,
-    padding: "0 14px",
+    padding: "0 12px",
   });
 
   const tagButtonStyle = (isActive) => ({
-    minHeight: 32,
+    minHeight: 28,
     borderRadius: 999,
     border: `1px solid ${isActive ? "rgba(177, 111, 83, 0.30)" : "rgba(45, 29, 23, 0.10)"}`,
     background: isActive ? "rgba(177, 111, 83, 0.12)" : "rgba(255, 252, 245, 0.64)",
     color: isActive ? "#9b5d45" : "rgba(72, 52, 43, 0.64)",
     boxShadow: "none",
-    fontSize: "0.7rem",
+    fontSize: "0.62rem",
     fontWeight: 800,
-    padding: "0 11px",
+    padding: "0 9px",
   });
 
   const navButtonStyle = {
-    minHeight: 38,
-    borderRadius: 16,
+    minHeight: 34,
+    borderRadius: 14,
     border: "1px solid rgba(45, 29, 23, 0.10)",
     background: "rgba(255, 252, 245, 0.78)",
     color: "#7c5d4e",
-    fontSize: "0.78rem",
+    fontSize: "0.68rem",
     fontWeight: 900,
     boxShadow: "0 8px 18px rgba(45, 29, 23, 0.06)",
   };
 
   return (
-    <section className="calendar-reference-page" style={{ gap: 12 }} data-build-marker="CALENDARIO_PREMIUM_V1">
+    <section className="calendar-reference-page" style={{ gap: 9 }} data-build-marker="CALENDARIO_REFINO_FINAL_V2">
       <div
         className="calendar-reference-header"
         style={{
-          marginTop: 4,
+          marginTop: 0,
           marginBottom: 0,
           padding: "0 2px",
         }}
@@ -3356,9 +3397,9 @@ function CalendarPage({
             style={{
               margin: "0 0 5px",
               color: "#9a7768",
-              fontSize: "0.68rem",
+              fontSize: "0.58rem",
               fontWeight: 900,
-              letterSpacing: "0.18em",
+              letterSpacing: "0.16em",
               textTransform: "uppercase",
             }}
           >
@@ -3369,8 +3410,8 @@ function CalendarPage({
             style={{
               fontSize:
                 calendarView === "semana"
-                  ? "clamp(1.36rem, 6vw, 1.8rem)"
-                  : "clamp(1.48rem, 6.4vw, 2rem)",
+                  ? "clamp(1.12rem, 5.2vw, 1.46rem)"
+                  : "clamp(1.24rem, 5.6vw, 1.62rem)",
               lineHeight: 0.98,
               letterSpacing: "-0.06em",
               textTransform: "none",
@@ -3388,10 +3429,10 @@ function CalendarPage({
         className="calendar-tag-tabs"
         style={{
           display: "flex",
-          gap: 8,
+          gap: 7,
           flexWrap: "nowrap",
           overflowX: "auto",
-          padding: "2px 2px 4px",
+          padding: "1px 2px 3px",
           margin: 0,
         }}
       >
@@ -3427,7 +3468,7 @@ function CalendarPage({
         className="calendar-tag-tabs"
         style={{
           display: "flex",
-          gap: 7,
+          gap: 6,
           flexWrap: "wrap",
           padding: 0,
           margin: 0,
@@ -3455,8 +3496,8 @@ function CalendarPage({
         style={{
           display: "grid",
           gridTemplateColumns: "1fr 1fr",
-          gap: 10,
-          margin: "2px 0 0",
+          gap: 8,
+          margin: "0",
         }}
       >
         <button type="button" onClick={goToPreviousPeriod} style={navButtonStyle}>
@@ -3473,7 +3514,7 @@ function CalendarPage({
           calendarView === "semana" ? "week-view" : calendarView === "dia" ? "day-view" : ""
         }`}
         style={{
-          borderRadius: 24,
+          borderRadius: 20,
           border: "1px solid rgba(45, 29, 23, 0.09)",
           background:
             "linear-gradient(180deg, rgba(255, 252, 246, 0.92), rgba(250, 245, 237, 0.82))",
@@ -3485,17 +3526,17 @@ function CalendarPage({
           className="reference-calendar-weekdays"
           style={{
             ...calendarGridStyle,
-            minHeight: 36,
+            minHeight: 30,
             background: "rgba(255, 252, 246, 0.72)",
             borderBottom: "1px solid rgba(45, 29, 23, 0.08)",
           }}
         >
           {calendarView === "dia" ? (
-            <span style={{ color: "#5a4034", fontSize: "0.72rem" }}>Dia</span>
+            <span style={{ color: "#5a4034", fontSize: "0.62rem" }}>Dia</span>
           ) : (
             <>
               {["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"].map((weekday) => (
-                <span key={weekday} style={{ color: "#5a4034", fontSize: "0.72rem" }}>
+                <span key={weekday} style={{ color: "#5a4034", fontSize: "0.62rem" }}>
                   {weekday}
                 </span>
               ))}
@@ -3507,7 +3548,7 @@ function CalendarPage({
           {calendarCells.map((cell) => {
             const dayEvents = eventsByDate[cell.iso] || [];
             const isSelected = selectedCalendarDate === cell.iso;
-            const maxEvents = calendarView === "dia" ? 8 : calendarView === "semana" ? 3 : 2;
+            const maxEvents = calendarView === "dia" ? 8 : calendarView === "semana" ? 2 : 2;
 
             return (
               <button
@@ -3518,8 +3559,8 @@ function CalendarPage({
                 } ${isSelected ? "selected" : ""}`}
                 onClick={() => selectDay(cell.iso)}
                 style={{
-                  minHeight: calendarView === "mes" ? 82 : calendarView === "semana" ? 104 : 96,
-                  padding: "8px 6px",
+                  minHeight: calendarView === "mes" ? 64 : calendarView === "semana" ? 82 : 72,
+                  padding: "6px 5px",
                   borderColor: isSelected ? "#2d1d17" : "rgba(45, 29, 23, 0.07)",
                   background: isSelected
                     ? "linear-gradient(180deg, rgba(255,252,246,0.98), rgba(245,236,225,0.92))"
@@ -3532,23 +3573,23 @@ function CalendarPage({
                 <span
                   className="reference-day-number"
                   style={{
-                    width: 26,
-                    height: 26,
+                    width: 22,
+                    height: 22,
                     borderRadius: 999,
                     display: "inline-grid",
                     placeItems: "center",
                     marginLeft: "auto",
-                    marginBottom: 5,
+                    marginBottom: 4,
                     color: isSelected ? "#fff8ee" : cell.isToday ? "#9b5d45" : "#31221d",
                     background: isSelected ? "#2d1d17" : cell.isToday ? "rgba(177, 111, 83, 0.14)" : "transparent",
-                    fontSize: "0.76rem",
+                    fontSize: "0.66rem",
                     fontWeight: 900,
                   }}
                 >
                   {cell.day}
                 </span>
 
-                <div className="reference-day-events" style={{ gap: 4 }}>
+                <div className="reference-day-events" style={{ gap: 3 }}>
                   {dayEvents.slice(0, maxEvents).map((event) => (
                     <span
                       key={event.id}
@@ -3559,10 +3600,10 @@ function CalendarPage({
                         background: "rgba(255, 248, 239, 0.78)",
                         border: "1px solid rgba(45, 29, 23, 0.07)",
                         borderLeftWidth: 3,
-                        borderRadius: 8,
-                        minHeight: 20,
-                        padding: "2px 5px",
-                        fontSize: "0.62rem",
+                        borderRadius: 7,
+                        minHeight: 17,
+                        padding: "1px 4px",
+                        fontSize: "0.54rem",
                         fontWeight: 900,
                       }}
                     >
@@ -3575,7 +3616,7 @@ function CalendarPage({
                       className="reference-more-events"
                       style={{
                         color: "#9a7768",
-                        fontSize: "0.6rem",
+                        fontSize: "0.54rem",
                         fontWeight: 900,
                       }}
                     >
@@ -3593,7 +3634,7 @@ function CalendarPage({
         className="calendar-day-details"
         ref={detailRef}
         style={{
-          borderRadius: 24,
+          borderRadius: 20,
           border: "1px solid rgba(45, 29, 23, 0.08)",
           background:
             "linear-gradient(180deg, rgba(255, 252, 246, 0.92), rgba(250, 245, 237, 0.82))",
@@ -3604,7 +3645,7 @@ function CalendarPage({
         <div
           className="calendar-day-details-header"
           style={{
-            padding: "16px 18px",
+            padding: "12px 14px",
             borderBottom: "1px solid rgba(45, 29, 23, 0.08)",
           }}
         >
@@ -3613,16 +3654,16 @@ function CalendarPage({
               style={{
                 margin: "0 0 4px",
                 color: "#9a7768",
-                fontSize: "0.62rem",
+                fontSize: "0.54rem",
                 fontWeight: 900,
-                letterSpacing: "0.16em",
+                letterSpacing: "0.14em",
                 textTransform: "uppercase",
               }}
             >
               Selecionado
             </p>
 
-            <h2 style={{ fontSize: "1.02rem", lineHeight: 1.05, margin: 0 }}>
+            <h2 style={{ fontSize: "0.92rem", lineHeight: 1.05, margin: 0 }}>
               {formatLongDate(selectedCalendarDate)}
             </h2>
           </div>
@@ -3631,14 +3672,14 @@ function CalendarPage({
             type="button"
             onClick={() => onOpenCreateChoice(selectedCalendarDate)}
             style={{
-              minHeight: 38,
-              borderRadius: 15,
+              minHeight: 34,
+              borderRadius: 13,
               background: "linear-gradient(135deg, #2d1d17, #3b281f)",
               color: "#fff8ee",
               border: 0,
               boxShadow: "0 10px 22px rgba(45, 29, 23, 0.14)",
-              padding: "0 14px",
-              fontSize: "0.76rem",
+              padding: "0 12px",
+              fontSize: "0.68rem",
               fontWeight: 900,
             }}
           >
@@ -3646,11 +3687,11 @@ function CalendarPage({
           </button>
         </div>
 
-        <div className="calendar-day-details-body" style={{ padding: 18 }}>
+        <div className="calendar-day-details-body" style={{ padding: 14 }}>
           <h3
             style={{
               margin: "0 0 12px",
-              fontSize: "1rem",
+              fontSize: "0.9rem",
               letterSpacing: "-0.04em",
             }}
           >
@@ -3658,14 +3699,14 @@ function CalendarPage({
           </h3>
 
           {selectedDayEvents.length ? (
-            <div className="calendar-day-event-list" style={{ gap: 10 }}>
+            <div className="calendar-day-event-list" style={{ gap: 8 }}>
               {selectedDayEvents.map((event) => (
                 <article
                   className="calendar-day-event-card"
                   key={event.id}
                   style={{
-                    padding: 13,
-                    borderRadius: 18,
+                    padding: 10,
+                    borderRadius: 16,
                     border: "1px solid rgba(45, 29, 23, 0.09)",
                     background: "rgba(255, 252, 246, 0.70)",
                     boxShadow: "none",
@@ -3675,8 +3716,8 @@ function CalendarPage({
                     className="calendar-day-event-dot"
                     style={{
                       backgroundColor: event.color,
-                      width: 12,
-                      height: 12,
+                      width: 10,
+                      height: 10,
                       marginTop: 5,
                     }}
                   />
@@ -3684,12 +3725,12 @@ function CalendarPage({
                   <div className="calendar-day-event-content">
                     <div className="calendar-day-event-top">
                       <div>
-                        <strong style={{ fontSize: "0.92rem", lineHeight: 1.08 }}>
+                        <strong style={{ fontSize: "0.82rem", lineHeight: 1.08 }}>
                           {event.title}
                         </strong>
 
                         {event.startTime || event.endTime ? (
-                          <small style={{ color: "#8a6a5b", fontSize: "0.72rem" }}>
+                          <small style={{ color: "#8a6a5b", fontSize: "0.66rem" }}>
                             {event.startTime || "--:--"}
                             {event.endTime ? ` – ${event.endTime}` : ""}
                           </small>
@@ -3702,7 +3743,7 @@ function CalendarPage({
                           background: "rgba(177, 111, 83, 0.10)",
                           color: "#9b5d45",
                           padding: "4px 8px",
-                          fontSize: "0.58rem",
+                          fontSize: "0.52rem",
                           letterSpacing: "0.08em",
                         }}
                       >
@@ -3760,12 +3801,12 @@ function CalendarPage({
             <div
               className="calendar-empty-day"
               style={{
-                minHeight: 82,
-                borderRadius: 18,
+                minHeight: 64,
+                borderRadius: 16,
                 border: "1px dashed rgba(45, 29, 23, 0.14)",
                 background: "rgba(255, 252, 246, 0.52)",
                 color: "#806052",
-                fontSize: "0.8rem",
+                fontSize: "0.72rem",
               }}
             >
               Nenhum compromisso para as tags selecionadas neste dia.
@@ -4856,9 +4897,15 @@ export default function App() {
       </aside>
 
       <section className="content">
-        <header className="topbar">
+        <header
+          className="topbar"
+          style={{
+            padding: "10px 0 9px",
+            marginBottom: 8,
+          }}
+        >
           <div className="topbar-brand">
-            <BrandLogo />
+            <BrandLogo compact />
           </div>
         </header>
 
