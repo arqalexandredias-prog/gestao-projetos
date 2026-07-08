@@ -214,18 +214,18 @@ function formatWeekLabel(dateString) {
   const firstDay = addDays(date, -date.getDay());
   const lastDay = addDays(firstDay, 6);
 
-  const start = new Intl.DateTimeFormat("pt-BR", {
+  const formatter = new Intl.DateTimeFormat("pt-BR", {
     day: "2-digit",
     month: "short",
-  }).format(firstDay);
+  });
 
-  const end = new Intl.DateTimeFormat("pt-BR", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  }).format(lastDay);
+  const start = formatter.format(firstDay).replace(/\.$/, "");
+  const end = formatter.format(lastDay).replace(/\.$/, "");
+  const sameYear = firstDay.getFullYear() === lastDay.getFullYear();
 
-  return `${start} — ${end}`;
+  return sameYear
+    ? `${start} — ${end} · ${lastDay.getFullYear()}`
+    : `${start} ${firstDay.getFullYear()} — ${end} ${lastDay.getFullYear()}`;
 }
 
 function getCommission(project) {
@@ -3270,10 +3270,27 @@ function CalendarPage({
   const calendarGridStyle = calendarView === "dia" ? { gridTemplateColumns: "1fr" } : undefined;
 
   return (
-    <section className="calendar-reference-page">
-      <div className="calendar-reference-header">
+    <section className="calendar-reference-page" style={{ gap: 14 }}>
+      <div
+        className="calendar-reference-header"
+        style={{ marginTop: 8, marginBottom: 2 }}
+      >
         <div>
-          <h1>{getCalendarTitle()}</h1>
+          <h1
+            style={{
+              fontSize:
+                calendarView === "semana"
+                  ? "clamp(1.42rem, 6vw, 2.05rem)"
+                  : "clamp(1.55rem, 7vw, 2.28rem)",
+              lineHeight: 0.98,
+              letterSpacing: "-0.06em",
+              textTransform: "none",
+              maxWidth: "100%",
+              margin: 0,
+            }}
+          >
+            {getCalendarTitle()}
+          </h1>
         </div>
       </div>
 
@@ -4878,14 +4895,40 @@ export default function App() {
 
         {activePage === "projetos" ? (
           <section className="page-section">
-            <section className="hero hero-small">
+            <section
+              className="hero hero-small"
+              style={{
+                padding: "22px 26px",
+                gap: 14,
+                marginBottom: 14,
+              }}
+            >
               <div>
-                <p>Controle</p>
-                <h1>Projetos</h1>
-                <small>Lista premium para acompanhar clientes, comissões e recebimentos.</small>
+                <p style={{ marginBottom: 8 }}>Controle</p>
+                <h1 style={{ fontSize: "clamp(1.8rem, 8vw, 2.55rem)", lineHeight: 0.96 }}>
+                  Projetos
+                </h1>
+                <small style={{ fontSize: "0.92rem", lineHeight: 1.28 }}>
+                  Lista premium para acompanhar clientes, comissões e recebimentos.
+                </small>
               </div>
 
-              <button type="button" className="primary-button" onClick={() => openNewProject()}>
+              <button
+                type="button"
+                className="primary-button"
+                onClick={() => openNewProject()}
+                style={{
+                  width: "fit-content",
+                  minWidth: 152,
+                  minHeight: 42,
+                  padding: "0 18px",
+                  borderRadius: 18,
+                  fontSize: "0.84rem",
+                  letterSpacing: "-0.02em",
+                  alignSelf: "flex-start",
+                  boxShadow: "0 16px 32px rgba(45, 29, 23, 0.18)",
+                }}
+              >
                 + Novo projeto
               </button>
             </section>
