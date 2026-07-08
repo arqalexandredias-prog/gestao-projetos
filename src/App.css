@@ -2193,4 +2193,52 @@ td {
   .project-detail-date-list strong {
     text-align: left;
   }
+}/* Filtro premium da aba Projetos */
+.project-filter-select {
+  display: inline-flex;
+  align-items: center;
+  overflow: hidden;
+  min-height: 42px;
+  border: 1px solid rgba(68, 43, 27, 0.14);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.86);
+}
+
+.project-filter-select span {
+  display: inline-flex;
+  align-items: center;
+  align-self: stretch;
+  padding: 0 14px;
+  border-right: 1px solid rgba(68, 43, 27, 0.1);
+  background: rgba(239, 225, 210, 0.62);
+  color: #7b6252;
+  font-size: 0.84rem;
+  font-weight: 850;
+}
+
+.project-filter-select select {
+  min-width: 150px;
+  height: 42px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #2b1f1a;
+  font-weight: 850;
+  outline: none;
+}
+
+@media (max-width: 620px) {
+  .project-filter-select {
+    width: 100%;
+    min-height: 46px;
+  }
+
+  .project-filter-select span {
+    flex: 0 0 auto;
+  }
+
+  .project-filter-select select {
+    width: 100%;
+    height: 46px;
+  }
 }

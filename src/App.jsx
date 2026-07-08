@@ -10,6 +10,7 @@ const CALENDAR_SELECTED_DATE_STORAGE_KEY =
   "alexandre-dias-gestao-projetos-calendario-data-selecionada";
 
 const STATUS_OPTIONS = ["Orçamento", "A receber", "Parcial", "Recebido", "Cancelado"];
+const PROJECT_FILTER_OPTIONS = ["Ativos", "Todos", ...STATUS_OPTIONS];
 const VALID_PAGES = ["resumo", "projetos", "calendario"];
 
 const CALENDAR_TAGS = [
@@ -1725,7 +1726,7 @@ export default function App() {
   const [isFormOpen, setIsFormOpen] = useState(false);
 
   const [selectedMonth, setSelectedMonth] = useState(initialSelectedCalendarDate.slice(0, 7));
-  const [statusFilter, setStatusFilter] = useState("Todos");
+  const [statusFilter, setStatusFilter] = useState("Ativos");
   const [search, setSearch] = useState("");
 
   const [activeCalendarTags, setActiveCalendarTags] = useState(loadActiveCalendarTags);
@@ -1769,7 +1770,18 @@ export default function App() {
 
     return monthProjects
       .filter((project) => {
-        if (statusFilter !== "Todos" && getDisplayStatus(project) !== statusFilter) return false;
+        const displayStatus = getDisplayStatus(project);
+
+        if (statusFilter === "Ativos" && !isActiveProject(project)) return false;
+
+        if (
+          statusFilter !== "Todos" &&
+          statusFilter !== "Ativos" &&
+          displayStatus !== statusFilter
+        ) {
+          return false;
+        }
+
         if (!term) return true;
 
         return [
@@ -1782,7 +1794,7 @@ export default function App() {
           project.clientPhone,
           project.consultant,
           project.project,
-          getDisplayStatus(project),
+          displayStatus,
           project.note,
         ]
           .join(" ")
@@ -2269,15 +2281,17 @@ export default function App() {
                 {formatMonthLabel(selectedMonth)}
               </button>
 
-              <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
-                <option value="Todos">Todos</option>
+              <div className="project-filter-select">
+                <span>Exibindo:</span>
 
-                {STATUS_OPTIONS.map((status) => (
-                  <option key={status} value={status}>
-                    {status}
-                  </option>
-                ))}
-              </select>
+                <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+                  {PROJECT_FILTER_OPTIONS.map((filter) => (
+                    <option key={filter} value={filter}>
+                      {filter}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
               <button type="button" onClick={() => setSelectedMonth("")}>
                 Ver todos
