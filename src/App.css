@@ -2132,4 +2132,65 @@ td {
     min-height: 104px;
     padding: 13px;
   }
+}/* Complemento do detalhe premium: contato e datas */
+.project-detail-contact-list {
+  display: grid;
+  gap: 5px;
+  margin-top: 10px;
+}
+
+.project-detail-contact-list span {
+  display: block;
+  color: #927868;
+  font-size: 0.82rem;
+  font-weight: 750;
+  line-height: 1.35;
+}
+
+.project-detail-contact-list b {
+  color: #6f5545;
+  font-weight: 900;
+}
+
+.project-detail-date-list {
+  display: grid;
+  gap: 12px;
+}
+
+.project-detail-date-list div {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(78, 55, 42, 0.1);
+}
+
+.project-detail-date-list div:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.project-detail-date-list span {
+  color: #7b6252;
+  font-size: 0.84rem;
+  font-weight: 760;
+}
+
+.project-detail-date-list strong {
+  color: #241914;
+  font-size: 0.92rem;
+  font-weight: 950;
+  text-align: right;
+}
+
+@media (max-width: 620px) {
+  .project-detail-date-list div {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+
+  .project-detail-date-list strong {
+    text-align: left;
+  }
 }

@@ -281,6 +281,22 @@ function getProjectCode(index) {
   return `P-${String(index + 1).padStart(3, "0")}`;
 }
 
+function getNextProjectCode(projects) {
+  const maxNumber = projects.reduce((max, project, index) => {
+    const code = project.projectCode || getProjectCode(index);
+    const match = String(code).match(/P-(\d+)/i);
+    const number = match ? Number(match[1]) : 0;
+
+    return Math.max(max, number);
+  }, 0);
+
+  return `P-${String(maxNumber + 1).padStart(3, "0")}`;
+}
+
+function getProjectDeadline(project) {
+  return project.deliveryDate || project.date || "";
+}
+
 function getInitials(name) {
   const parts = String(name || "")
     .trim()
@@ -315,11 +331,15 @@ function formatDaysUntil(dateString) {
   return `há ${Math.abs(days)} dias`;
 }
 
-function emptyProjectForm(date = todayISO()) {
+function emptyProjectForm(date = todayISO(), projectCode = "") {
   return {
+    projectCode,
     date,
+    deliveryDate: "",
     development: "",
     client: "",
+    clientEmail: "",
+    clientPhone: "",
     consultant: "",
     project: "",
     amount: "",
@@ -488,7 +508,9 @@ function ProjectTable({ projects, onEdit, onDelete, onMarkReceived, emptyMessage
       <table>
         <thead>
           <tr>
+            <th>Código</th>
             <th>Data</th>
+            <th>Prazo</th>
             <th>Empreendimento</th>
             <th>Cliente</th>
             <th>Consultor</th>
@@ -503,12 +525,14 @@ function ProjectTable({ projects, onEdit, onDelete, onMarkReceived, emptyMessage
         </thead>
 
         <tbody>
-          {projects.map((item) => {
+          {projects.map((item, index) => {
             const pendingCommission = getPendingCommission(item);
 
             return (
               <tr key={item.id}>
+                <td>{item.projectCode || getProjectCode(index)}</td>
                 <td>{formatDate(item.date)}</td>
+                <td>{formatDate(getProjectDeadline(item))}</td>
                 <td>{item.development || "-"}</td>
                 <td>{item.client || "-"}</td>
                 <td>{item.consultant || "-"}</td>
@@ -565,7 +589,7 @@ function ProjectMobileList({ projects, emptyMessage, onOpenDetails }) {
       </div>
 
       {projects.map((project, index) => {
-        const code = getProjectCode(index);
+        const code = project.projectCode || getProjectCode(index);
         const status = getDisplayStatus(project);
 
         return (
@@ -597,11 +621,12 @@ function ProjectDetailModal({ details, onClose, onEdit }) {
   const status = getDisplayStatus(project);
   const title = getProjectTitle(project);
   const client = getProjectClient(project);
+  const deadline = getProjectDeadline(project);
   const commission = getCommission(project);
   const received = getReceivedCommission(project);
   const pending = getPendingCommission(project);
   const progress = commission ? Math.min(Math.round((received / commission) * 100), 100) : 0;
-  const daysUntil = getDaysUntil(project.date);
+  const daysUntil = getDaysUntil(deadline);
 
   function money(value) {
     return hideValues ? "••••••" : formatCurrency(value);
@@ -654,7 +679,9 @@ function ProjectDetailModal({ details, onClose, onEdit }) {
           <article className="project-detail-card green">
             <span>Comissão</span>
             <strong>{money(commission)}</strong>
-            <small>{project.commissionPercent || 0}% sobre {money(project.amount)}</small>
+            <small>
+              {project.commissionPercent || 0}% sobre {money(project.amount)}
+            </small>
           </article>
 
           <article className="project-detail-card orange">
@@ -664,9 +691,9 @@ function ProjectDetailModal({ details, onClose, onEdit }) {
           </article>
 
           <article className="project-detail-card sand">
-            <span>Prazo / Data</span>
-            <strong>{daysUntil === null ? "—" : formatDaysUntil(project.date)}</strong>
-            <small>{project.date ? `Data em ${formatDate(project.date)}` : "Sem data"}</small>
+            <span>Prazo de entrega</span>
+            <strong>{daysUntil === null ? "—" : formatDaysUntil(deadline)}</strong>
+            <small>{deadline ? `Entrega em ${formatDate(deadline)}` : "Sem prazo definido"}</small>
           </article>
         </div>
 
@@ -678,7 +705,39 @@ function ProjectDetailModal({ details, onClose, onEdit }) {
 
             <div>
               <strong>{client}</strong>
-              <span>{project.consultant ? `Consultor: ${project.consultant}` : "Consultor não informado"}</span>
+              <span>
+                {project.consultant ? `Consultor: ${project.consultant}` : "Consultor não informado"}
+              </span>
+
+              <div className="project-detail-contact-list">
+                <span>
+                  <b>E-mail:</b> {project.clientEmail || "Não informado"}
+                </span>
+                <span>
+                  <b>Telefone:</b> {project.clientPhone || "Não informado"}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="project-detail-section">
+          <h3>Próximas datas</h3>
+
+          <div className="project-detail-date-list">
+            <div>
+              <span>Data do projeto</span>
+              <strong>{project.date ? formatDate(project.date) : "Sem data"}</strong>
+            </div>
+
+            <div>
+              <span>Prazo de entrega</span>
+              <strong>{deadline ? formatDate(deadline) : "Sem prazo"}</strong>
+            </div>
+
+            <div>
+              <span>Status do prazo</span>
+              <strong>{deadline ? formatDaysUntil(deadline) : "Sem data"}</strong>
             </div>
           </div>
         </div>
@@ -714,7 +773,7 @@ function ProjectDetailModal({ details, onClose, onEdit }) {
             <button type="button">
               <span>📅</span>
               <strong>Cronograma</strong>
-              <small>{project.date ? formatDate(project.date) : "Sem data"}</small>
+              <small>{deadline ? formatDate(deadline) : "Sem data"}</small>
             </button>
 
             <button type="button">
@@ -815,12 +874,35 @@ function ProjectFormModal({ form, setForm, editingId, onClose, onSubmit }) {
 
         <form onSubmit={onSubmit} className="project-form">
           <label>
-            Data
+            Código
+            <input
+              type="text"
+              value={form.projectCode}
+              placeholder="Ex: P-001"
+              onChange={(event) =>
+                setForm((prev) => ({ ...prev, projectCode: event.target.value }))
+              }
+            />
+          </label>
+
+          <label>
+            Data do projeto
             <input
               type="date"
               value={form.date}
               onChange={(event) => setForm((prev) => ({ ...prev, date: event.target.value }))}
               required
+            />
+          </label>
+
+          <label>
+            Prazo de entrega
+            <input
+              type="date"
+              value={form.deliveryDate}
+              onChange={(event) =>
+                setForm((prev) => ({ ...prev, deliveryDate: event.target.value }))
+              }
             />
           </label>
 
@@ -844,6 +926,30 @@ function ProjectFormModal({ form, setForm, editingId, onClose, onSubmit }) {
               placeholder="Ex: Maria"
               onChange={(event) => setForm((prev) => ({ ...prev, client: event.target.value }))}
               required
+            />
+          </label>
+
+          <label>
+            E-mail do cliente
+            <input
+              type="email"
+              value={form.clientEmail}
+              placeholder="Ex: cliente@email.com"
+              onChange={(event) =>
+                setForm((prev) => ({ ...prev, clientEmail: event.target.value }))
+              }
+            />
+          </label>
+
+          <label>
+            Telefone do cliente
+            <input
+              type="tel"
+              value={form.clientPhone}
+              placeholder="Ex: (47) 99999-9999"
+              onChange={(event) =>
+                setForm((prev) => ({ ...prev, clientPhone: event.target.value }))
+              }
             />
           </label>
 
@@ -1581,9 +1687,13 @@ export default function App() {
         if (!term) return true;
 
         return [
+          project.projectCode,
           project.date,
+          project.deliveryDate,
           project.development,
           project.client,
+          project.clientEmail,
+          project.clientPhone,
           project.consultant,
           project.project,
           getDisplayStatus(project),
@@ -1628,16 +1738,20 @@ export default function App() {
 
   function openNewProject(date = todayISO()) {
     setEditingId(null);
-    setForm(emptyProjectForm(date));
+    setForm(emptyProjectForm(date, getNextProjectCode(projects)));
     setIsFormOpen(true);
   }
 
   function openEditProject(project) {
     setEditingId(project.id);
     setForm({
+      projectCode: project.projectCode || "",
       date: project.date || todayISO(),
+      deliveryDate: project.deliveryDate || "",
       development: project.development || "",
       client: project.client || "",
+      clientEmail: project.clientEmail || "",
+      clientPhone: project.clientPhone || "",
       consultant: project.consultant || "",
       project: project.project || "",
       amount: formatMoneyInputFromNumber(project.amount),
@@ -1695,9 +1809,13 @@ export default function App() {
 
     const payload = {
       id: editingId || createId(),
+      projectCode: form.projectCode.trim() || getNextProjectCode(projects),
       date: form.date,
+      deliveryDate: form.deliveryDate,
       development: form.development.trim(),
       client: form.client.trim(),
+      clientEmail: form.clientEmail.trim(),
+      clientPhone: form.clientPhone.trim(),
       consultant: form.consultant.trim(),
       project: form.project.trim(),
       amount,
@@ -2049,7 +2167,7 @@ export default function App() {
               <input
                 type="search"
                 value={search}
-                placeholder="Buscar por cliente, empreendimento, consultor ou projeto..."
+                placeholder="Buscar por cliente, empreendimento, consultor, telefone, e-mail ou código..."
                 onChange={(event) => setSearch(event.target.value)}
               />
 
