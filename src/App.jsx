@@ -149,6 +149,15 @@ function formatMonthLabel(monthString) {
   }).format(date);
 }
 
+function formatAdjacentMonthLabel(monthString, offset) {
+  const [year, month] = monthString.split("-").map(Number);
+  const date = new Date(year, month - 1 + offset, 1);
+
+  return new Intl.DateTimeFormat("pt-BR", {
+    month: "long",
+  }).format(date);
+}
+
 function getCommission(project) {
   const amount = Number(project.amount) || 0;
   const percent = Number(project.commissionPercent) || 0;
@@ -823,6 +832,8 @@ function CalendarPage({
   const detailRef = useRef(null);
   const monthToUse = month || todayISO().slice(0, 7);
   const monthCells = getMonthCells(monthToUse);
+  const previousMonthLabel = formatAdjacentMonthLabel(monthToUse, -1);
+  const nextMonthLabel = formatAdjacentMonthLabel(monthToUse, 1);
 
   const projectCalendarEvents = useMemo(() => {
     return projects.map((project) => ({
@@ -831,6 +842,7 @@ function CalendarPage({
       tag: "Projeto",
       title: project.client || project.development || project.project || "Projeto",
       subtitle: project.development || project.project || "",
+      description: project.note || "",
       date: project.date,
       color: project.color || EVENT_COLORS[0],
       project,
@@ -897,20 +909,6 @@ function CalendarPage({
         <div>
           <h1>{formatMonthLabel(monthToUse)}</h1>
         </div>
-
-        <div className="calendar-month-nav">
-          <button type="button" onClick={() => changeMonth(-1)}>
-            ← Mês anterior
-          </button>
-
-          <button type="button" onClick={() => setMonth(todayISO().slice(0, 7))}>
-            Hoje
-          </button>
-
-          <button type="button" onClick={() => changeMonth(1)}>
-            Próximo mês →
-          </button>
-        </div>
       </div>
 
       <div className="calendar-tag-tabs">
@@ -924,6 +922,16 @@ function CalendarPage({
             {tag.label}
           </button>
         ))}
+      </div>
+
+      <div className="calendar-month-nav">
+        <button type="button" onClick={() => changeMonth(-1)}>
+          ← {previousMonthLabel}
+        </button>
+
+        <button type="button" onClick={() => changeMonth(1)}>
+          {nextMonthLabel} →
+        </button>
       </div>
 
       <div className="reference-calendar-card">
