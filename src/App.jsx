@@ -3513,6 +3513,145 @@ export default function App() {
       .slice(0, 5);
   }, [monthProjects]);
 
+  const dashboardHub = useMemo(() => {
+    const activeProjects = projects.filter(isActiveProject);
+
+    const taskItems = projects.flatMap((project) =>
+      getProjectTasks(project).map((task) => ({
+        id: `task-${project.id}-${task.id}`,
+        kind: "Tarefa",
+        icon: "✓",
+        title: task.title,
+        date: task.dueDate,
+        status: task.completed ? "Concluída" : "Pendente",
+        project,
+      }))
+    );
+
+    const scheduleItems = projects.flatMap((project) =>
+      getProjectSchedule(project).map((item) => ({
+        id: `schedule-${project.id}-${item.id}`,
+        kind: "Cronograma",
+        icon: "📅",
+        title: item.title,
+        date: item.date,
+        status: item.status,
+        project,
+      }))
+    );
+
+    const budgetItems = projects.flatMap((project) =>
+      getProjectBudgets(project).map((budget) => ({
+        id: `budget-${project.id}-${budget.id}`,
+        kind: "Orçamento",
+        icon: "🧾",
+        title: budget.title || budget.supplier || "Orçamento",
+        date: budget.date,
+        amount: budget.amount,
+        status: budget.status,
+        project,
+      }))
+    );
+
+    const diaryItems = projects.flatMap((project) =>
+      getProjectDiary(project).map((entry) => ({
+        id: `diary-${project.id}-${entry.id}`,
+        kind: entry.type || "Diário",
+        icon: "✍",
+        title: entry.title || entry.text || "Registro do diário",
+        date: entry.date,
+        pinned: entry.pinned,
+        project,
+      }))
+    );
+
+    const openTasks = taskItems.filter((item) => item.status !== "Concluída");
+    const urgentTasks = openTasks
+      .filter((item) => {
+        const days = getDaysUntil(item.date);
+        return days !== null && days <= 3;
+      })
+      .sort((a, b) => String(a.date || "9999-99-99").localeCompare(String(b.date || "9999-99-99")));
+
+    const openScheduleItems = scheduleItems.filter((item) => item.status !== "Concluído");
+    const urgentScheduleItems = openScheduleItems
+      .filter((item) => {
+        const days = getDaysUntil(item.date);
+        return days !== null && days <= 7;
+      })
+      .sort((a, b) => String(a.date || "9999-99-99").localeCompare(String(b.date || "9999-99-99")));
+
+    const sentBudgets = budgetItems
+      .filter((item) => item.status === "Enviado")
+      .sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")));
+
+    const pinnedDiary = diaryItems
+      .filter((item) => item.pinned)
+      .sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")));
+
+    const budgetSummary = getBudgetSummary(budgetItems);
+
+    const projectCards = activeProjects
+      .map((project) => {
+        const taskProgress = getTaskProgress(getProjectTasks(project));
+        const scheduleProgress = getScheduleProgress(getProjectSchedule(project));
+        const progressParts = [];
+
+        if (taskProgress.total) progressParts.push(taskProgress.percent);
+        if (scheduleProgress.total) progressParts.push(scheduleProgress.percent);
+
+        const operationalProgress = progressParts.length
+          ? Math.round(progressParts.reduce((sum, value) => sum + value, 0) / progressParts.length)
+          : 0;
+
+        return {
+          project,
+          deadline: getProjectDeadline(project),
+          operationalProgress,
+          taskProgress,
+          scheduleProgress,
+          filesTotal: getProjectFiles(project).length,
+          budgetsTotal: getProjectBudgets(project).length,
+          diaryTotal: getProjectDiary(project).length,
+        };
+      })
+      .sort((a, b) => {
+        const dateA = a.deadline || "9999-99-99";
+        const dateB = b.deadline || "9999-99-99";
+
+        if (dateA !== dateB) return dateA.localeCompare(dateB);
+        return getProjectOrderValue(b.project).localeCompare(getProjectOrderValue(a.project));
+      })
+      .slice(0, 5);
+
+    const focusItems = [
+      ...urgentTasks.slice(0, 3),
+      ...urgentScheduleItems.slice(0, 3),
+      ...sentBudgets.slice(0, 2),
+      ...pinnedDiary.slice(0, 2),
+    ].slice(0, 6);
+
+    return {
+      activeProjects: activeProjects.length,
+      tasksTotal: taskItems.length,
+      tasksDone: taskItems.filter((item) => item.status === "Concluída").length,
+      openTasks: openTasks.length,
+      urgentTasks: urgentTasks.length,
+      scheduleTotal: scheduleItems.length,
+      scheduleDone: scheduleItems.filter((item) => item.status === "Concluído").length,
+      openSchedule: openScheduleItems.length,
+      urgentSchedule: urgentScheduleItems.length,
+      filesTotal: projects.reduce((sum, project) => sum + getProjectFiles(project).length, 0),
+      budgetItemsTotal: budgetSummary.totalItems,
+      budgetApprovedTotal: budgetSummary.approvedTotal,
+      budgetGrandTotal: budgetSummary.grandTotal,
+      diaryTotal: diaryItems.length,
+      pinnedDiaryTotal: pinnedDiary.length,
+      projectCards,
+      focusItems,
+    };
+  }, [projects]);
+
   const progressPercent = summary.commission
     ? Math.min(Math.round((summary.received / summary.commission) * 100), 100)
     : 0;
@@ -4390,43 +4529,170 @@ export default function App() {
               />
             </section>
 
+            <section className="summary-grid">
+              <SummaryCard
+                icon="✓"
+                label="Tarefas abertas"
+                value={String(dashboardHub.openTasks)}
+                helper={`${dashboardHub.tasksDone}/${dashboardHub.tasksTotal} concluídas`}
+                tone={dashboardHub.urgentTasks > 0 ? "pending" : "neutral"}
+              />
+
+              <SummaryCard
+                icon="◷"
+                label="Etapas em aberto"
+                value={String(dashboardHub.openSchedule)}
+                helper={`${dashboardHub.scheduleDone}/${dashboardHub.scheduleTotal} etapas concluídas`}
+                tone={dashboardHub.urgentSchedule > 0 ? "pending" : "neutral"}
+              />
+
+              <SummaryCard
+                icon="📁"
+                label="Arquivos salvos"
+                value={String(dashboardHub.filesTotal)}
+                helper="Links, briefing, contratos e referências"
+              />
+
+              <SummaryCard
+                icon="🧾"
+                label="Orçamentos"
+                value={formatCurrency(dashboardHub.budgetApprovedTotal)}
+                helper={`${dashboardHub.budgetItemsTotal} cadastrados · ${formatCurrency(
+                  dashboardHub.budgetGrandTotal
+                )} total`}
+                tone="received"
+              />
+
+              <SummaryCard
+                icon="✍"
+                label="Diário"
+                value={String(dashboardHub.diaryTotal)}
+                helper={`${dashboardHub.pinnedDiaryTotal} registros fixados`}
+              />
+            </section>
+
             <section className="dashboard-grid">
               <div className="panel side-panel">
                 <div className="panel-header compact">
                   <div>
-                    <p>Próximos</p>
-                    <h2>Lançamentos</h2>
+                    <p>Central</p>
+                    <h2>Projetos em andamento</h2>
                   </div>
 
-                  <button type="button" onClick={() => setActivePage("calendario")}>
-                    Ver calendário
+                  <button type="button" onClick={() => setActivePage("projetos")}>
+                    Ver projetos
                   </button>
                 </div>
 
                 <div className="project-lines">
-                  {nextProjects.length ? (
-                    nextProjects.map((project) => (
+                  {dashboardHub.projectCards.length ? (
+                    dashboardHub.projectCards.map((item) => (
                       <button
                         type="button"
                         className="launch-line"
-                        key={project.id}
-                        onClick={() => openEditProject(project)}
+                        key={item.project.id}
+                        onClick={() => openProjectDetails(item.project, item.project.projectCode)}
                       >
-                        <div>
-                          <strong>{project.client || "Cliente sem nome"}</strong>
-                          <span>{project.development || project.project || "Projeto"}</span>
+                        <div style={{ display: "grid", gap: 8, minWidth: 0 }}>
+                          <strong>{getProjectClient(item.project)}</strong>
+                          <span>{getProjectTitle(item.project)}</span>
+
+                          <div className="progress-track" style={{ height: 6, marginTop: 2 }}>
+                            <i style={{ width: `${item.operationalProgress}%` }} />
+                          </div>
+
+                          <small style={{ color: "var(--text-soft)" }}>
+                            Tarefas {item.taskProgress.percent}% · Cronograma {item.scheduleProgress.percent}% · {item.filesTotal} arquivo{item.filesTotal === 1 ? "" : "s"}
+                          </small>
                         </div>
 
-                        <span>{formatDate(getProjectDeadline(project))}</span>
+                        <span>
+                          {item.deadline ? formatDaysUntil(item.deadline) : `${item.operationalProgress}%`}
+                        </span>
                       </button>
                     ))
                   ) : (
-                    <div className="soft-empty">Nenhum próximo lançamento cadastrado.</div>
+                    <div className="soft-empty">Nenhum projeto ativo para acompanhar agora.</div>
                   )}
                 </div>
               </div>
 
               <aside className="side-stack">
+                <div className="panel side-panel">
+                  <div className="panel-header compact">
+                    <div>
+                      <p>Atenção</p>
+                      <h2>Prioridades do dia</h2>
+                    </div>
+
+                    <button type="button" onClick={() => setActivePage("calendario")}>
+                      Calendário
+                    </button>
+                  </div>
+
+                  <div className="project-lines">
+                    {dashboardHub.focusItems.length ? (
+                      dashboardHub.focusItems.map((item) => (
+                        <button
+                          type="button"
+                          className="launch-line"
+                          key={item.id}
+                          onClick={() => openProjectDetails(item.project, item.project.projectCode)}
+                        >
+                          <div>
+                            <strong>
+                              {item.icon} {item.title}
+                            </strong>
+                            <span>
+                              {item.kind} · {getProjectClient(item.project)}
+                              {item.amount ? ` · ${formatCurrency(item.amount)}` : ""}
+                            </span>
+                          </div>
+
+                          <span>{item.date ? formatDaysUntil(item.date) : item.status || "Fixado"}</span>
+                        </button>
+                      ))
+                    ) : (
+                      <div className="soft-empty">Nenhuma tarefa, etapa ou orçamento urgente agora.</div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="panel side-panel">
+                  <div className="panel-header compact">
+                    <div>
+                      <p>Próximos</p>
+                      <h2>Entregas e lançamentos</h2>
+                    </div>
+
+                    <button type="button" onClick={() => setActivePage("calendario")}>
+                      Ver calendário
+                    </button>
+                  </div>
+
+                  <div className="project-lines">
+                    {nextProjects.length ? (
+                      nextProjects.map((project) => (
+                        <button
+                          type="button"
+                          className="launch-line"
+                          key={project.id}
+                          onClick={() => openProjectDetails(project, project.projectCode)}
+                        >
+                          <div>
+                            <strong>{project.client || "Cliente sem nome"}</strong>
+                            <span>{project.development || project.project || "Projeto"}</span>
+                          </div>
+
+                          <span>{formatDate(getProjectDeadline(project))}</span>
+                        </button>
+                      ))
+                    ) : (
+                      <div className="soft-empty">Nenhum próximo lançamento cadastrado.</div>
+                    )}
+                  </div>
+                </div>
+
                 <div className="panel side-panel">
                   <div className="panel-header compact">
                     <div>
