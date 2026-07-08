@@ -269,6 +269,52 @@ function isActiveProject(project) {
   return status !== "Recebido" && status !== "Cancelado";
 }
 
+function getProjectTitle(project) {
+  return project.development || project.project || "Projeto sem nome";
+}
+
+function getProjectClient(project) {
+  return project.client || "Cliente sem nome";
+}
+
+function getProjectCode(index) {
+  return `P-${String(index + 1).padStart(3, "0")}`;
+}
+
+function getInitials(name) {
+  const parts = String(name || "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+
+  if (!parts.length) return "AD";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+
+  return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+}
+
+function getDaysUntil(dateString) {
+  if (!isValidDateString(dateString)) return null;
+
+  const today = parseISODate(todayISO());
+  const date = parseISODate(dateString);
+  const diff = date.getTime() - today.getTime();
+
+  return Math.ceil(diff / (1000 * 60 * 60 * 24));
+}
+
+function formatDaysUntil(dateString) {
+  const days = getDaysUntil(dateString);
+
+  if (days === null) return "Sem data";
+  if (days === 0) return "Hoje";
+  if (days === 1) return "Amanhã";
+  if (days > 1) return `em ${days} dias`;
+  if (days === -1) return "ontem";
+
+  return `há ${Math.abs(days)} dias`;
+}
+
 function emptyProjectForm(date = todayISO()) {
   return {
     date,
@@ -504,6 +550,206 @@ function ProjectTable({ projects, onEdit, onDelete, onMarkReceived, emptyMessage
           })}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+function ProjectMobileList({ projects, emptyMessage, onOpenDetails }) {
+  if (!projects.length) return <div className="empty-state">{emptyMessage}</div>;
+
+  return (
+    <div className="projects-premium-list">
+      <div className="projects-premium-head">
+        <span>Código</span>
+        <span>Projeto</span>
+      </div>
+
+      {projects.map((project, index) => {
+        const code = getProjectCode(index);
+        const status = getDisplayStatus(project);
+
+        return (
+          <button
+            type="button"
+            key={project.id}
+            className="projects-premium-row"
+            onClick={() => onOpenDetails(project, code)}
+          >
+            <span className="projects-premium-code">{code}</span>
+
+            <span className="projects-premium-info">
+              <strong>{getProjectTitle(project)}</strong>
+              <small>{getProjectClient(project)}</small>
+            </span>
+
+            <span className={`projects-premium-status status-dot-${getStatusClass(status)}`} />
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function ProjectDetailModal({ details, onClose, onEdit }) {
+  const [hideValues, setHideValues] = useState(false);
+  const { project, code } = details;
+
+  const status = getDisplayStatus(project);
+  const title = getProjectTitle(project);
+  const client = getProjectClient(project);
+  const commission = getCommission(project);
+  const received = getReceivedCommission(project);
+  const pending = getPendingCommission(project);
+  const progress = commission ? Math.min(Math.round((received / commission) * 100), 100) : 0;
+  const daysUntil = getDaysUntil(project.date);
+
+  function money(value) {
+    return hideValues ? "••••••" : formatCurrency(value);
+  }
+
+  return (
+    <div className="project-detail-backdrop">
+      <section className="project-detail-sheet">
+        <button type="button" className="project-detail-close" onClick={onClose}>
+          ×
+        </button>
+
+        <div className="project-detail-hero">
+          <div className="project-detail-hero-grid" />
+
+          <div className="project-detail-hero-top">
+            <span>Projeto · cód. {code}</span>
+            <strong>{status}</strong>
+          </div>
+
+          <h2>{title}</h2>
+          <p>para {client}</p>
+
+          <span className="project-detail-type">
+            <i />
+            {project.project || "Projeto de interiores"}
+          </span>
+        </div>
+
+        <div className="project-detail-actions">
+          <button type="button" onClick={() => onEdit(project)}>
+            ✎ Editar projeto
+          </button>
+
+          <button type="button" onClick={() => setHideValues((current) => !current)}>
+            {hideValues ? "👁 Mostrar valores" : "◌ Ocultar valores"}
+          </button>
+        </div>
+
+        <div className="project-detail-summary-grid">
+          <article className="project-detail-card">
+            <span>Recebimento</span>
+            <strong>{progress}%</strong>
+            <small>{money(received)} recebido</small>
+            <div className="project-detail-progress">
+              <i style={{ width: `${progress}%` }} />
+            </div>
+          </article>
+
+          <article className="project-detail-card green">
+            <span>Comissão</span>
+            <strong>{money(commission)}</strong>
+            <small>{project.commissionPercent || 0}% sobre {money(project.amount)}</small>
+          </article>
+
+          <article className="project-detail-card orange">
+            <span>A receber</span>
+            <strong>{money(pending)}</strong>
+            <small>{pending > 0 ? "Pendente" : "Tudo recebido"}</small>
+          </article>
+
+          <article className="project-detail-card sand">
+            <span>Prazo / Data</span>
+            <strong>{daysUntil === null ? "—" : formatDaysUntil(project.date)}</strong>
+            <small>{project.date ? `Data em ${formatDate(project.date)}` : "Sem data"}</small>
+          </article>
+        </div>
+
+        <div className="project-detail-section">
+          <h3>Cliente</h3>
+
+          <div className="project-detail-client">
+            <div className="project-detail-avatar">{getInitials(client)}</div>
+
+            <div>
+              <strong>{client}</strong>
+              <span>{project.consultant ? `Consultor: ${project.consultant}` : "Consultor não informado"}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="project-detail-section">
+          <h3>Financeiro</h3>
+
+          <div className="project-detail-finance">
+            <span>Total vendido</span>
+            <strong>{money(project.amount)}</strong>
+
+            <span>Comissão calculada</span>
+            <strong>{money(commission)}</strong>
+
+            <span>Recebido</span>
+            <strong className="ok">{money(received)}</strong>
+
+            <span>A receber</span>
+            <strong className="warn">{money(pending)}</strong>
+          </div>
+        </div>
+
+        <div className="project-detail-section">
+          <h3>Seções do projeto</h3>
+
+          <div className="project-detail-shortcuts">
+            <button type="button">
+              <span>💸</span>
+              <strong>Pagamentos</strong>
+              <small>{progress}% pago</small>
+            </button>
+
+            <button type="button">
+              <span>📅</span>
+              <strong>Cronograma</strong>
+              <small>{project.date ? formatDate(project.date) : "Sem data"}</small>
+            </button>
+
+            <button type="button">
+              <span>✓</span>
+              <strong>Tarefas</strong>
+              <small>Em breve</small>
+            </button>
+
+            <button type="button">
+              <span>📁</span>
+              <strong>Arquivos</strong>
+              <small>Em breve</small>
+            </button>
+
+            <button type="button">
+              <span>🧾</span>
+              <strong>Orçamentos</strong>
+              <small>{money(project.amount)}</small>
+            </button>
+
+            <button type="button">
+              <span>✍</span>
+              <strong>Diário</strong>
+              <small>{project.note ? "1 registro" : "Sem registros"}</small>
+            </button>
+          </div>
+        </div>
+
+        {project.note ? (
+          <div className="project-detail-section">
+            <h3>Observações</h3>
+            <p className="project-detail-note">{project.note}</p>
+          </div>
+        ) : null}
+      </section>
     </div>
   );
 }
@@ -1079,10 +1325,7 @@ function CalendarPage({
     changeMonth(1);
   }
 
-  const calendarGridStyle =
-    calendarView === "dia"
-      ? { gridTemplateColumns: "1fr" }
-      : undefined;
+  const calendarGridStyle = calendarView === "dia" ? { gridTemplateColumns: "1fr" } : undefined;
 
   return (
     <section className="calendar-reference-page">
@@ -1166,6 +1409,7 @@ function CalendarPage({
           {calendarCells.map((cell) => {
             const dayEvents = eventsByDate[cell.iso] || [];
             const isSelected = selectedCalendarDate === cell.iso;
+            const maxEvents = calendarView === "dia" ? 8 : 3;
 
             return (
               <button
@@ -1179,7 +1423,7 @@ function CalendarPage({
                 <span className="reference-day-number">{cell.day}</span>
 
                 <div className="reference-day-events">
-                  {dayEvents.slice(0, calendarView === "dia" ? 8 : 3).map((event) => (
+                  {dayEvents.slice(0, maxEvents).map((event) => (
                     <span
                       key={event.id}
                       className="reference-event-pill"
@@ -1189,9 +1433,9 @@ function CalendarPage({
                     </span>
                   ))}
 
-                  {dayEvents.length > (calendarView === "dia" ? 8 : 3) ? (
+                  {dayEvents.length > maxEvents ? (
                     <small className="reference-more-events">
-                      +{dayEvents.length - (calendarView === "dia" ? 8 : 3)} mais
+                      +{dayEvents.length - maxEvents} mais
                     </small>
                   ) : null}
                 </div>
@@ -1297,6 +1541,7 @@ export default function App() {
 
   const [isCreateChoiceOpen, setIsCreateChoiceOpen] = useState(false);
   const [calendarEventForm, setCalendarEventForm] = useState(null);
+  const [projectDetails, setProjectDetails] = useState(null);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(projects));
@@ -1473,6 +1718,7 @@ export default function App() {
 
     setSelectedCalendarDate(payload.date);
     setSelectedMonth(payload.date.slice(0, 7));
+    setProjectDetails(null);
     closeForm();
   }
 
@@ -1481,6 +1727,7 @@ export default function App() {
     if (!confirmDelete) return;
 
     setProjects((current) => current.filter((project) => project.id !== id));
+    setProjectDetails(null);
   }
 
   function markAsReceived(id) {
@@ -1497,6 +1744,15 @@ export default function App() {
           : project
       )
     );
+  }
+
+  function openProjectDetails(project, code) {
+    setProjectDetails({ project, code });
+  }
+
+  function editProjectFromDetails(project) {
+    setProjectDetails(null);
+    openEditProject(project);
   }
 
   function openCreateChoice(date) {
@@ -1781,7 +2037,7 @@ export default function App() {
               <div>
                 <p>Controle</p>
                 <h1>Projetos</h1>
-                <small>Lista compacta para acompanhar clientes, comissões e recebimentos.</small>
+                <small>Lista premium para acompanhar clientes, comissões e recebimentos.</small>
               </div>
 
               <button type="button" className="primary-button" onClick={() => openNewProject()}>
@@ -1817,13 +2073,21 @@ export default function App() {
               </button>
             </div>
 
-            <ProjectTable
+            <ProjectMobileList
               projects={visibleProjects}
-              onEdit={openEditProject}
-              onDelete={deleteProject}
-              onMarkReceived={markAsReceived}
+              onOpenDetails={openProjectDetails}
               emptyMessage="Nenhum projeto encontrado com esses filtros."
             />
+
+            <div className="projects-table-desktop">
+              <ProjectTable
+                projects={visibleProjects}
+                onEdit={openEditProject}
+                onDelete={deleteProject}
+                onMarkReceived={markAsReceived}
+                emptyMessage="Nenhum projeto encontrado com esses filtros."
+              />
+            </div>
           </section>
         ) : null}
 
@@ -1872,6 +2136,14 @@ export default function App() {
           setEventForm={setCalendarEventForm}
           onClose={() => setCalendarEventForm(null)}
           onSubmit={saveCalendarEvent}
+        />
+      ) : null}
+
+      {projectDetails ? (
+        <ProjectDetailModal
+          details={projectDetails}
+          onClose={() => setProjectDetails(null)}
+          onEdit={editProjectFromDetails}
         />
       ) : null}
     </main>
