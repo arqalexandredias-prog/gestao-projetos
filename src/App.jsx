@@ -2,8 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import "./App.css";
 
 const STORAGE_KEY = "alexandre-dias-gestao-projetos-v1";
+const PAGE_STORAGE_KEY = "alexandre-dias-gestao-projetos-pagina-atual";
 
 const STATUS_OPTIONS = ["Orçamento", "A receber", "Parcial", "Recebido", "Cancelado"];
+const VALID_PAGES = ["resumo", "projetos", "calendario"];
 
 function todayISO() {
   const now = new Date();
@@ -14,6 +16,15 @@ function todayISO() {
 function createId() {
   if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function loadActivePage() {
+  try {
+    const savedPage = localStorage.getItem(PAGE_STORAGE_KEY);
+    return VALID_PAGES.includes(savedPage) ? savedPage : "resumo";
+  } catch {
+    return "resumo";
+  }
 }
 
 function formatMoneyInput(value) {
@@ -763,7 +774,7 @@ function FullCalendarPage({
                 ))
               ) : (
                 <div className="soft-empty">
-                  Nenhum projeto nessa data. Clique em “Cadastrar” para lançar um projeto aqui.
+                  Nenhum projeto nessa data.
                 </div>
               )
             ) : (
@@ -780,7 +791,7 @@ function FullCalendarPage({
 
 export default function App() {
   const [projects, setProjects] = useState(loadProjects);
-  const [activePage, setActivePage] = useState("resumo");
+  const [activePage, setActivePage] = useState(loadActivePage);
 
   const [form, setForm] = useState(emptyProjectForm);
   const [editingId, setEditingId] = useState(null);
@@ -795,6 +806,10 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(projects));
   }, [projects]);
+
+  useEffect(() => {
+    localStorage.setItem(PAGE_STORAGE_KEY, activePage);
+  }, [activePage]);
 
   const currentMonthForUi = selectedMonth || todayISO().slice(0, 7);
 
