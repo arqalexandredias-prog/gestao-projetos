@@ -1,6 +1,6 @@
 ﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" fill="#2A170F"/>
-  <rect x="399" y="41" width="82" height="82" rx="24" fill="#C48667"/>
-  <text x="195" y="278" text-anchor="middle" font-family="Georgia,serif" font-size="172" font-weight="700" fill="#F4EEE7">AD</text>
-  <text x="220" y="364" text-anchor="middle" font-family="Arial,sans-serif" font-size="34" font-weight="800" letter-spacing="3" fill="#F4EEE7">PROJETOS</text>
+  <rect width="512" height="512" fill="#2d1d17"/>
+  <rect x="376" y="64" width="74" height="74" rx="22" fill="#be7254"/>
+  <text x="250" y="284" text-anchor="middle" font-family="Georgia,serif" font-size="172" font-weight="700" fill="#fff8ee">AD</text>
+  <text x="256" y="370" text-anchor="middle" font-family="Arial,sans-serif" font-size="30" font-weight="800" letter-spacing="5" fill="#dcc3b3">PROJETOS</text>
 </svg>
