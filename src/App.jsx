@@ -1282,8 +1282,22 @@ function ProjectMobileList({ projects, emptyMessage, onOpenDetails }) {
   if (!projects.length) return <div className="empty-state">{emptyMessage}</div>;
 
   return (
-    <div className="projects-premium-list">
-      <div className="projects-premium-head">
+    <div
+      className="projects-premium-list"
+      style={{
+        borderRadius: 22,
+        overflow: "hidden",
+      }}
+    >
+      <div
+        className="projects-premium-head"
+        style={{
+          padding: "12px 20px",
+          minHeight: "auto",
+          fontSize: "0.7rem",
+          letterSpacing: "0.22em",
+        }}
+      >
         <span>Código</span>
         <span>Projeto</span>
       </div>
@@ -1297,17 +1311,64 @@ function ProjectMobileList({ projects, emptyMessage, onOpenDetails }) {
             key={project.id}
             className="projects-premium-row"
             onClick={() => onOpenDetails(project, code)}
+            style={{
+              gridTemplateColumns: "74px 1fr 16px",
+              minHeight: 66,
+              padding: "12px 20px",
+              gap: 12,
+            }}
           >
-            <span className="projects-premium-code">{code}</span>
+            <span
+              className="projects-premium-code"
+              style={{
+                fontSize: "0.9rem",
+                letterSpacing: "0.04em",
+                lineHeight: 1,
+              }}
+            >
+              {code}
+            </span>
 
-            <span className="projects-premium-info">
-              <strong>{getProjectTitle(project)}</strong>
-              <small>{getProjectClient(project)}</small>
+            <span
+              className="projects-premium-info"
+              style={{
+                gap: 3,
+                minWidth: 0,
+              }}
+            >
+              <strong
+                style={{
+                  fontSize: "0.98rem",
+                  lineHeight: 1.08,
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  maxWidth: "100%",
+                }}
+              >
+                {getProjectTitle(project)}
+              </strong>
+              <small
+                style={{
+                  fontSize: "0.82rem",
+                  lineHeight: 1.1,
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  maxWidth: "100%",
+                }}
+              >
+                {getProjectClient(project)}
+              </small>
             </span>
 
             <span
               className="projects-premium-status"
-              style={{ backgroundColor: project.color || EVENT_COLORS[0] }}
+              style={{
+                width: 9,
+                height: 9,
+                backgroundColor: project.color || EVENT_COLORS[0],
+              }}
             />
           </button>
         );
