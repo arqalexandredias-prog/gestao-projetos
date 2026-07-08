@@ -1,17 +1,8 @@
-﻿function registerPWA() {
-  if (!("serviceWorker" in navigator)) return;
-  if (!import.meta.env.PROD) return;
-
-  window.addEventListener("load", async () => {
-    try {
-      const registration = await navigator.serviceWorker.register("/sw.js");
-      registration.update();
-      console.info("PWA registrado:", registration.scope);
-    } catch (error) {
-      console.warn("NÃ£o foi possÃ­vel registrar o PWA:", error);
-    }
+﻿// GESTAO_PROJETOS_PWA_V2
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker
+      .register("/sw.js")
+      .catch((error) => console.warn("Service Worker nÃ£o registrado:", error));
   });
 }
-
-registerPWA();
-
