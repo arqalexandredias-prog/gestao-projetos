@@ -327,6 +327,8 @@ function normalizeProjectCodes(projects) {
     const taskProgress = getTaskProgress(tasks);
     const schedule = normalizeProjectSchedule(project.schedule);
     const scheduleProgress = getScheduleProgress(schedule);
+    const budgets = normalizeProjectBudgets(project.budgets);
+    const budgetSummary = getBudgetSummary(budgets);
 
     return {
       ...project,
@@ -338,6 +340,10 @@ function normalizeProjectCodes(projects) {
       scheduleProgress: scheduleProgress.percent,
       scheduleTotal: scheduleProgress.total,
       scheduleDone: scheduleProgress.done,
+      budgets,
+      budgetsTotal: budgetSummary.totalItems,
+      budgetsApprovedTotal: budgetSummary.approvedTotal,
+      budgetsGrandTotal: budgetSummary.grandTotal,
       createdAt: project.createdAt || project.updatedAt || project.date || "",
       projectCode:
         codeById.get(project.id) ||
@@ -772,6 +778,112 @@ function withProjectFiles(project, files) {
   };
 }
 
+const BUDGET_STATUS_OPTIONS = ["Rascunho", "Enviado", "Aprovado", "Recusado"];
+
+function emptyBudgetForm() {
+  return {
+    title: "",
+    supplier: "",
+    amount: "",
+    date: todayISO(),
+    status: "Rascunho",
+    url: "",
+    note: "",
+  };
+}
+
+function normalizeBudgetStatus(status) {
+  return BUDGET_STATUS_OPTIONS.includes(status) ? status : "Rascunho";
+}
+
+function normalizeProjectBudgets(budgets) {
+  if (!Array.isArray(budgets)) return [];
+
+  return budgets
+    .map((budget, index) => ({
+      id: budget.id || createId(),
+      title: String(budget.title || "").trim(),
+      supplier: String(budget.supplier || "").trim(),
+      amount: Number(budget.amount) || 0,
+      date: isValidDateString(budget.date) ? budget.date : "",
+      status: normalizeBudgetStatus(budget.status),
+      url: normalizeUrl(budget.url),
+      note: String(budget.note || "").trim(),
+      position: Number.isFinite(Number(budget.position)) ? Number(budget.position) : index + 1,
+      createdAt: budget.createdAt || new Date().toISOString(),
+      updatedAt: budget.updatedAt || budget.createdAt || new Date().toISOString(),
+    }))
+    .filter((budget) => budget.title || budget.supplier || budget.amount > 0 || budget.url)
+    .sort((a, b) => {
+      if (a.status === "Aprovado" && b.status !== "Aprovado") return -1;
+      if (a.status !== "Aprovado" && b.status === "Aprovado") return 1;
+      if (a.date && b.date && a.date !== b.date) return b.date.localeCompare(a.date);
+      if (a.position !== b.position) return a.position - b.position;
+
+      return String(b.createdAt || "").localeCompare(String(a.createdAt || ""));
+    });
+}
+
+function getProjectBudgets(project) {
+  return normalizeProjectBudgets(project?.budgets);
+}
+
+function getBudgetSummary(budgets) {
+  const normalizedBudgets = normalizeProjectBudgets(budgets);
+  const approvedBudgets = normalizedBudgets.filter((budget) => budget.status === "Aprovado");
+  const sentBudgets = normalizedBudgets.filter((budget) => budget.status === "Enviado");
+  const rejectedBudgets = normalizedBudgets.filter((budget) => budget.status === "Recusado");
+
+  return {
+    totalItems: normalizedBudgets.length,
+    grandTotal: normalizedBudgets.reduce((sum, budget) => sum + (Number(budget.amount) || 0), 0),
+    approvedCount: approvedBudgets.length,
+    approvedTotal: approvedBudgets.reduce((sum, budget) => sum + (Number(budget.amount) || 0), 0),
+    sentCount: sentBudgets.length,
+    sentTotal: sentBudgets.reduce((sum, budget) => sum + (Number(budget.amount) || 0), 0),
+    rejectedCount: rejectedBudgets.length,
+  };
+}
+
+function getProjectBudgetsLabel(project) {
+  const summary = getBudgetSummary(getProjectBudgets(project));
+
+  if (!summary.totalItems) return "Criar orçamentos";
+  if (summary.approvedTotal > 0) return `${formatCurrency(summary.approvedTotal)} aprovado`;
+
+  return `${summary.totalItems} orçamento${summary.totalItems > 1 ? "s" : ""}`;
+}
+
+function getBudgetStatusClass(status) {
+  if (status === "Aprovado") return "status-recebido";
+  if (status === "Enviado") return "status-parcial";
+  if (status === "Recusado") return "status-cancelado";
+
+  return "status-a-receber";
+}
+
+function getNextBudgetStatus(status) {
+  if (status === "Rascunho") return "Enviado";
+  if (status === "Enviado") return "Aprovado";
+  if (status === "Aprovado") return "Rascunho";
+
+  return "Rascunho";
+}
+
+function withProjectBudgets(project, budgets) {
+  const normalizedBudgets = normalizeProjectBudgets(budgets);
+  const summary = getBudgetSummary(normalizedBudgets);
+
+  return {
+    ...project,
+    budgets: normalizedBudgets,
+    budgetsTotal: summary.totalItems,
+    budgetsApprovedTotal: summary.approvedTotal,
+    budgetsGrandTotal: summary.grandTotal,
+    updatedAt: new Date().toISOString(),
+  };
+}
+
 function loadProjects() {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
@@ -1042,11 +1154,15 @@ function ProjectSectionModal({
   onAddFile,
   onDeleteFile,
   onToggleFileFavorite,
+  onAddBudget,
+  onUpdateBudgetStatus,
+  onDeleteBudget,
 }) {
   const [paymentForm, setPaymentForm] = useState(emptyPaymentForm);
   const [taskForm, setTaskForm] = useState(emptyTaskForm);
   const [scheduleForm, setScheduleForm] = useState(emptyScheduleForm);
   const [fileForm, setFileForm] = useState(emptyProjectFileForm);
+  const [budgetForm, setBudgetForm] = useState(emptyBudgetForm);
 
   const title = getProjectTitle(project);
   const client = getProjectClient(project);
@@ -1063,6 +1179,8 @@ function ProjectSectionModal({
   const scheduleProgress = getScheduleProgress(schedule);
   const files = getProjectFiles(project);
   const favoriteFilesCount = files.filter((file) => file.favorite).length;
+  const budgets = getProjectBudgets(project);
+  const budgetSummary = getBudgetSummary(budgets);
 
   const titles = {
     pagamentos: "Pagamentos",
@@ -1114,6 +1232,16 @@ function ProjectSectionModal({
 
     if (saved) {
       setFileForm(emptyProjectFileForm());
+    }
+  }
+
+  function submitBudget(event) {
+    event.preventDefault();
+
+    const saved = onAddBudget(project.id, budgetForm);
+
+    if (saved) {
+      setBudgetForm(emptyBudgetForm());
     }
   }
 
@@ -1380,30 +1508,222 @@ function ProjectSectionModal({
           <div className="project-section-popup-body">
             <div className="project-section-info-list">
               <div>
-                <span>Total vendido</span>
+                <span>Valor do projeto</span>
                 <strong>{money(project.amount)}</strong>
               </div>
 
               <div>
-                <span>Comissão</span>
+                <span>Total orçado</span>
+                <strong>{money(budgetSummary.grandTotal)}</strong>
+              </div>
+
+              <div>
+                <span>Aprovado</span>
+                <strong>{money(budgetSummary.approvedTotal)}</strong>
+              </div>
+
+              <div>
+                <span>Enviado</span>
+                <strong>{money(budgetSummary.sentTotal)}</strong>
+              </div>
+
+              <div>
+                <span>Comissão estimada</span>
                 <strong>{money(commission)}</strong>
               </div>
-
-              <div>
-                <span>Recebido</span>
-                <strong>{money(received)}</strong>
-              </div>
-
-              <div>
-                <span>A receber</span>
-                <strong>{money(pending)}</strong>
-              </div>
-
-              <div>
-                <span>Progresso</span>
-                <strong>{progress}% pago</strong>
-              </div>
             </div>
+
+            <div className="project-payment-total">
+              <span>Orçamentos cadastrados</span>
+              <strong>{budgetSummary.totalItems}</strong>
+            </div>
+
+            <p className="project-payment-empty">
+              Controle propostas, fornecedores, links e valores de orçamento dentro deste projeto.
+              Use o status para separar rascunhos, enviados, aprovados e recusados.
+            </p>
+
+            <form className="project-payment-form" onSubmit={submitBudget}>
+              <label className="project-payment-form-wide">
+                Nome do orçamento
+                <input
+                  type="text"
+                  value={budgetForm.title}
+                  placeholder="Ex: Marcenaria cozinha / Marmoraria / Projeto executivo"
+                  onChange={(event) =>
+                    setBudgetForm((prev) => ({
+                      ...prev,
+                      title: event.target.value,
+                    }))
+                  }
+                />
+              </label>
+
+              <label>
+                Fornecedor
+                <input
+                  type="text"
+                  value={budgetForm.supplier}
+                  placeholder="Ex: Paula / Marmoraria X"
+                  onChange={(event) =>
+                    setBudgetForm((prev) => ({
+                      ...prev,
+                      supplier: event.target.value,
+                    }))
+                  }
+                />
+              </label>
+
+              <label>
+                Valor
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={budgetForm.amount}
+                  placeholder="Ex: 18.500,00"
+                  onChange={(event) =>
+                    setBudgetForm((prev) => ({
+                      ...prev,
+                      amount: formatMoneyInput(event.target.value),
+                    }))
+                  }
+                />
+              </label>
+
+              <label>
+                Data
+                <input
+                  type="date"
+                  value={budgetForm.date}
+                  onChange={(event) =>
+                    setBudgetForm((prev) => ({
+                      ...prev,
+                      date: event.target.value,
+                    }))
+                  }
+                />
+              </label>
+
+              <label>
+                Status
+                <select
+                  value={budgetForm.status}
+                  onChange={(event) =>
+                    setBudgetForm((prev) => ({
+                      ...prev,
+                      status: event.target.value,
+                    }))
+                  }
+                >
+                  {BUDGET_STATUS_OPTIONS.map((statusOption) => (
+                    <option key={statusOption} value={statusOption}>
+                      {statusOption}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="project-payment-form-wide">
+                Link
+                <input
+                  type="text"
+                  value={budgetForm.url}
+                  placeholder="Ex: link do Drive, PDF ou proposta"
+                  onChange={(event) =>
+                    setBudgetForm((prev) => ({
+                      ...prev,
+                      url: event.target.value,
+                    }))
+                  }
+                />
+              </label>
+
+              <label className="project-payment-form-wide">
+                Observação
+                <input
+                  type="text"
+                  value={budgetForm.note}
+                  placeholder="Ex: cliente pediu revisão / aguardando retorno"
+                  onChange={(event) =>
+                    setBudgetForm((prev) => ({
+                      ...prev,
+                      note: event.target.value,
+                    }))
+                  }
+                />
+              </label>
+
+              <button type="submit">Adicionar orçamento</button>
+            </form>
+
+            {!budgets.length ? (
+              <div className="project-section-empty">
+                Nenhum orçamento cadastrado ainda.
+              </div>
+            ) : (
+              <div className="project-payment-list">
+                {budgets.map((budget) => (
+                  <article key={budget.id} className="project-payment-item">
+                    <div>
+                      <strong>{budget.title || budget.supplier || "Orçamento"}</strong>
+
+                      <span>{budget.supplier || "Fornecedor não informado"}</span>
+
+                      <small>
+                        <span className={`status ${getBudgetStatusClass(budget.status)}`}>
+                          {budget.status}
+                        </span>
+                      </small>
+
+                      <small>
+                        {money(budget.amount)} · {budget.date ? formatDate(budget.date) : "Sem data"}
+                      </small>
+
+                      {budget.url ? (
+                        <small>
+                          <a href={budget.url} target="_blank" rel="noreferrer">
+                            Abrir proposta
+                          </a>
+                        </small>
+                      ) : null}
+
+                      {budget.note ? <small>{budget.note}</small> : null}
+                    </div>
+
+                    <div className="row-actions">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          onUpdateBudgetStatus(
+                            project.id,
+                            budget.id,
+                            getNextBudgetStatus(budget.status)
+                          )
+                        }
+                      >
+                        {budget.status === "Aprovado" ? "Reabrir" : "Avançar"}
+                      </button>
+
+                      <button
+                        type="button"
+                        className="danger"
+                        onClick={() => onUpdateBudgetStatus(project.id, budget.id, "Recusado")}
+                      >
+                        Recusar
+                      </button>
+
+                      <button
+                        type="button"
+                        className="danger"
+                        onClick={() => onDeleteBudget(project.id, budget.id)}
+                      >
+                        Excluir
+                      </button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
           </div>
         ) : null}
 
@@ -1700,6 +2020,9 @@ function ProjectDetailModal({
   onAddFile,
   onDeleteFile,
   onToggleFileFavorite,
+  onAddBudget,
+  onUpdateBudgetStatus,
+  onDeleteBudget,
 }) {
   const [hideValues, setHideValues] = useState(false);
   const [activeSection, setActiveSection] = useState(null);
@@ -1718,6 +2041,7 @@ function ProjectDetailModal({
   const paymentsTotal = getPaymentsTotal(project);
   const taskProgress = getTaskProgress(getProjectTasks(project));
   const scheduleProgress = getScheduleProgress(getProjectSchedule(project));
+  const budgetSummary = getBudgetSummary(getProjectBudgets(project));
 
   function money(value) {
     return hideValues ? "••••••" : formatCurrency(value);
@@ -1884,7 +2208,7 @@ function ProjectDetailModal({
             <button type="button" onClick={() => setActiveSection("orcamentos")}>
               <span>🧾</span>
               <strong>Orçamentos</strong>
-              <small>{money(project.amount)}</small>
+              <small>{budgetSummary.totalItems ? getProjectBudgetsLabel(project) : money(project.amount)}</small>
             </button>
 
             <button type="button" onClick={() => setActiveSection("diario")}>
@@ -1921,6 +2245,9 @@ function ProjectDetailModal({
             onAddFile={onAddFile}
             onDeleteFile={onDeleteFile}
             onToggleFileFavorite={onToggleFileFavorite}
+            onAddBudget={onAddBudget}
+            onUpdateBudgetStatus={onUpdateBudgetStatus}
+            onDeleteBudget={onDeleteBudget}
           />
         ) : null}
       </section>
@@ -3017,6 +3344,10 @@ export default function App() {
       scheduleDone: existingProject?.scheduleDone || 0,
       files: getProjectFiles(existingProject),
       filesTotal: getProjectFiles(existingProject).length,
+      budgets: getProjectBudgets(existingProject),
+      budgetsTotal: getProjectBudgets(existingProject).length,
+      budgetsApprovedTotal: getBudgetSummary(getProjectBudgets(existingProject)).approvedTotal,
+      budgetsGrandTotal: getBudgetSummary(getProjectBudgets(existingProject)).grandTotal,
       createdAt: existingProject?.createdAt || existingProject?.updatedAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -3430,6 +3761,85 @@ export default function App() {
     );
   }
 
+  function addProjectBudget(projectId, budgetFormPayload) {
+    const title = String(budgetFormPayload.title || "").trim();
+    const supplier = String(budgetFormPayload.supplier || "").trim();
+    const amount = parseMoney(budgetFormPayload.amount);
+    const url = normalizeUrl(budgetFormPayload.url);
+    const note = String(budgetFormPayload.note || "").trim();
+
+    if (!title && !supplier && amount <= 0 && !url) {
+      window.alert("Informe pelo menos o nome, fornecedor, valor ou link do orçamento.");
+      return false;
+    }
+
+    setProjects((current) =>
+      normalizeProjectCodes(
+        current.map((project) => {
+          if (project.id !== projectId) return project;
+
+          const currentBudgets = getProjectBudgets(project);
+          const newBudget = {
+            id: createId(),
+            title: title || supplier || "Orçamento",
+            supplier,
+            amount,
+            date: isValidDateString(budgetFormPayload.date) ? budgetFormPayload.date : todayISO(),
+            status: normalizeBudgetStatus(budgetFormPayload.status),
+            url,
+            note,
+            position: currentBudgets.length + 1,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+
+          return withProjectBudgets(project, [...currentBudgets, newBudget]);
+        })
+      )
+    );
+
+    return true;
+  }
+
+  function updateProjectBudgetStatus(projectId, budgetId, nextStatus) {
+    setProjects((current) =>
+      normalizeProjectCodes(
+        current.map((project) => {
+          if (project.id !== projectId) return project;
+
+          const nextBudgets = getProjectBudgets(project).map((budget) =>
+            budget.id === budgetId
+              ? {
+                  ...budget,
+                  status: normalizeBudgetStatus(nextStatus),
+                  updatedAt: new Date().toISOString(),
+                }
+              : budget
+          );
+
+          return withProjectBudgets(project, nextBudgets);
+        })
+      )
+    );
+  }
+
+  function deleteProjectBudget(projectId, budgetId) {
+    const confirmDelete = window.confirm("Excluir este orçamento do projeto?");
+    if (!confirmDelete) return;
+
+    setProjects((current) =>
+      normalizeProjectCodes(
+        current.map((project) => {
+          if (project.id !== projectId) return project;
+
+          const nextBudgets = getProjectBudgets(project).filter((budget) => budget.id !== budgetId);
+
+          return withProjectBudgets(project, nextBudgets);
+        })
+      )
+    );
+  }
+
   function openProjectDetails(project, code) {
     setProjectDetails({ project, code });
   }
@@ -3834,6 +4244,9 @@ export default function App() {
           onAddFile={addProjectFile}
           onDeleteFile={deleteProjectFile}
           onToggleFileFavorite={toggleProjectFileFavorite}
+          onAddBudget={addProjectBudget}
+          onUpdateBudgetStatus={updateProjectBudgetStatus}
+          onDeleteBudget={deleteProjectBudget}
         />
       ) : null}
     </main>
