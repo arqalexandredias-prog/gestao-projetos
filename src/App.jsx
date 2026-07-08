@@ -4,7 +4,6 @@ import "./App.css";
 const STORAGE_KEY = "alexandre-dias-gestao-projetos-v1";
 const PAGE_STORAGE_KEY = "alexandre-dias-gestao-projetos-pagina-atual";
 const CALENDAR_EVENTS_STORAGE_KEY = "alexandre-dias-gestao-projetos-eventos-calendario-v2";
-const CALENDAR_VIEW_STORAGE_KEY = "alexandre-dias-gestao-projetos-calendario-visualizacao";
 
 const STATUS_OPTIONS = ["Orçamento", "A receber", "Parcial", "Recebido", "Cancelado"];
 const VALID_PAGES = ["resumo", "projetos", "calendario"];
@@ -46,40 +45,10 @@ function toISODate(date) {
   return local.toISOString().slice(0, 10);
 }
 
-function parseISODate(dateString) {
-  const [year, month, day] = String(dateString).split("-").map(Number);
-  return new Date(year, month - 1, day);
-}
-
 function addDays(date, amount) {
   const next = new Date(date);
   next.setDate(next.getDate() + amount);
   return next;
-}
-
-function addMonths(date, amount) {
-  const next = new Date(date);
-  next.setMonth(next.getMonth() + amount);
-  return next;
-}
-
-function getMonthKey(date) {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
-}
-
-function getMonthName(monthString) {
-  const [year, month] = monthString.split("-").map(Number);
-  const date = new Date(year, month - 1, 1);
-
-  return new Intl.DateTimeFormat("pt-BR", {
-    month: "long",
-  }).format(date);
-}
-
-function getShortMonthNameFromDate(date) {
-  return new Intl.DateTimeFormat("pt-BR", {
-    month: "long",
-  }).format(date);
 }
 
 function loadActivePage() {
@@ -88,15 +57,6 @@ function loadActivePage() {
     return VALID_PAGES.includes(savedPage) ? savedPage : "resumo";
   } catch {
     return "resumo";
-  }
-}
-
-function loadCalendarView() {
-  try {
-    const savedView = localStorage.getItem(CALENDAR_VIEW_STORAGE_KEY);
-    return savedView === "semana" ? "semana" : "mes";
-  } catch {
-    return "mes";
   }
 }
 
@@ -167,7 +127,8 @@ function formatDate(dateString) {
 function formatLongDate(dateString) {
   if (!dateString) return "";
 
-  const date = parseISODate(dateString);
+  const [year, month, day] = dateString.split("-").map(Number);
+  const date = new Date(year, month - 1, day);
 
   return new Intl.DateTimeFormat("pt-BR", {
     day: "2-digit",
@@ -186,25 +147,6 @@ function formatMonthLabel(monthString) {
     month: "long",
     year: "numeric",
   }).format(date);
-}
-
-function formatWeekLabel(selectedDate) {
-  const date = parseISODate(selectedDate);
-  const start = addDays(date, -date.getDay());
-  const end = addDays(start, 6);
-
-  const startDay = new Intl.DateTimeFormat("pt-BR", {
-    day: "2-digit",
-    month: "short",
-  }).format(start);
-
-  const endDay = new Intl.DateTimeFormat("pt-BR", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  }).format(end);
-
-  return `${startDay} – ${endDay}`;
 }
 
 function getCommission(project) {
@@ -322,23 +264,6 @@ function getMonthCells(monthString) {
       iso,
       day: date.getDate(),
       isCurrentMonth: date.getMonth() === month - 1,
-      isToday: iso === todayISO(),
-    };
-  });
-}
-
-function getWeekCells(selectedDate) {
-  const date = parseISODate(selectedDate);
-  const start = addDays(date, -date.getDay());
-
-  return Array.from({ length: 7 }, (_, index) => {
-    const weekDate = addDays(start, index);
-    const iso = toISODate(weekDate);
-
-    return {
-      iso,
-      day: weekDate.getDate(),
-      isCurrentMonth: true,
       isToday: iso === todayISO(),
     };
   });
@@ -890,8 +815,6 @@ function CalendarPage({
   setActiveCalendarTags,
   selectedCalendarDate,
   setSelectedCalendarDate,
-  calendarView,
-  setCalendarView,
   onOpenCreateChoice,
   onEditProject,
   onEditCalendarEvent,
@@ -899,17 +822,7 @@ function CalendarPage({
 }) {
   const detailRef = useRef(null);
   const monthToUse = month || todayISO().slice(0, 7);
-
-  const monthDate = useMemo(() => {
-    const [year, monthNumber] = monthToUse.split("-").map(Number);
-    return new Date(year, monthNumber - 1, 1);
-  }, [monthToUse]);
-
-  const previousMonthDate = addMonths(monthDate, -1);
-  const nextMonthDate = addMonths(monthDate, 1);
-
-  const calendarCells =
-    calendarView === "semana" ? getWeekCells(selectedCalendarDate) : getMonthCells(monthToUse);
+  const monthCells = getMonthCells(monthToUse);
 
   const projectCalendarEvents = useMemo(() => {
     return projects.map((project) => ({
@@ -918,7 +831,6 @@ function CalendarPage({
       tag: "Projeto",
       title: project.client || project.development || project.project || "Projeto",
       subtitle: project.development || project.project || "",
-      description: project.note || "",
       date: project.date,
       color: project.color || EVENT_COLORS[0],
       project,
@@ -951,26 +863,11 @@ function CalendarPage({
       });
   }, [filteredCalendarEvents, selectedCalendarDate]);
 
-  function goToPreviousPeriod() {
-    if (calendarView === "semana") {
-      const previousWeek = addDays(parseISODate(selectedCalendarDate), -7);
-      setSelectedCalendarDate(toISODate(previousWeek));
-      setMonth(getMonthKey(previousWeek));
-      return;
-    }
-
-    setMonth(getMonthKey(previousMonthDate));
-  }
-
-  function goToNextPeriod() {
-    if (calendarView === "semana") {
-      const nextWeek = addDays(parseISODate(selectedCalendarDate), 7);
-      setSelectedCalendarDate(toISODate(nextWeek));
-      setMonth(getMonthKey(nextWeek));
-      return;
-    }
-
-    setMonth(getMonthKey(nextMonthDate));
+  function changeMonth(direction) {
+    const [year, monthNumber] = monthToUse.split("-").map(Number);
+    const next = new Date(year, monthNumber - 1 + direction, 1);
+    const nextMonth = `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, "0")}`;
+    setMonth(nextMonth);
   }
 
   function toggleTag(tagId) {
@@ -985,7 +882,6 @@ function CalendarPage({
 
   function selectDay(date) {
     setSelectedCalendarDate(date);
-    setMonth(date.slice(0, 7));
 
     window.setTimeout(() => {
       detailRef.current?.scrollIntoView({
@@ -999,24 +895,20 @@ function CalendarPage({
     <section className="calendar-reference-page">
       <div className="calendar-reference-header">
         <div>
-          <h1>{calendarView === "semana" ? formatWeekLabel(selectedCalendarDate) : formatMonthLabel(monthToUse)}</h1>
+          <h1>{formatMonthLabel(monthToUse)}</h1>
         </div>
 
-        <div className="calendar-view-toggle">
-          <button
-            type="button"
-            className={calendarView === "mes" ? "active" : ""}
-            onClick={() => setCalendarView("mes")}
-          >
-            Mês
+        <div className="calendar-month-nav">
+          <button type="button" onClick={() => changeMonth(-1)}>
+            ← Mês anterior
           </button>
 
-          <button
-            type="button"
-            className={calendarView === "semana" ? "active" : ""}
-            onClick={() => setCalendarView("semana")}
-          >
-            Semana
+          <button type="button" onClick={() => setMonth(todayISO().slice(0, 7))}>
+            Hoje
+          </button>
+
+          <button type="button" onClick={() => changeMonth(1)}>
+            Próximo mês →
           </button>
         </div>
       </div>
@@ -1034,17 +926,7 @@ function CalendarPage({
         ))}
       </div>
 
-      <div className="calendar-month-nav">
-        <button type="button" onClick={goToPreviousPeriod}>
-          ← {calendarView === "semana" ? "Semana" : getShortMonthNameFromDate(previousMonthDate)}
-        </button>
-
-        <button type="button" onClick={goToNextPeriod}>
-          {calendarView === "semana" ? "Semana" : getShortMonthNameFromDate(nextMonthDate)} →
-        </button>
-      </div>
-
-      <div className={`reference-calendar-card ${calendarView === "semana" ? "week-view" : ""}`}>
+      <div className="reference-calendar-card">
         <div className="reference-calendar-weekdays">
           <span>Dom</span>
           <span>Seg</span>
@@ -1056,7 +938,7 @@ function CalendarPage({
         </div>
 
         <div className="reference-calendar-grid">
-          {calendarCells.map((cell) => {
+          {monthCells.map((cell) => {
             const dayEvents = eventsByDate[cell.iso] || [];
             const isSelected = selectedCalendarDate === cell.iso;
 
@@ -1171,7 +1053,6 @@ export default function App() {
   const [projects, setProjects] = useState(loadProjects);
   const [calendarEvents, setCalendarEvents] = useState(loadCalendarEvents);
   const [activePage, setActivePage] = useState(loadActivePage);
-  const [calendarView, setCalendarView] = useState(loadCalendarView);
 
   const [form, setForm] = useState(emptyProjectForm);
   const [editingId, setEditingId] = useState(null);
@@ -1198,10 +1079,6 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem(PAGE_STORAGE_KEY, activePage);
   }, [activePage]);
-
-  useEffect(() => {
-    localStorage.setItem(CALENDAR_VIEW_STORAGE_KEY, calendarView);
-  }, [calendarView]);
 
   const monthProjects = useMemo(() => {
     if (!selectedMonth) return projects;
@@ -1718,8 +1595,6 @@ export default function App() {
             setActiveCalendarTags={setActiveCalendarTags}
             selectedCalendarDate={selectedCalendarDate}
             setSelectedCalendarDate={setSelectedCalendarDate}
-            calendarView={calendarView}
-            setCalendarView={setCalendarView}
             onOpenCreateChoice={openCreateChoice}
             onEditProject={openEditProject}
             onEditCalendarEvent={editCalendarEvent}
