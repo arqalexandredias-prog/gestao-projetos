@@ -1,30 +1,242 @@
 ﻿<!doctype html>
 <html lang="pt-BR">
   <head>
-    <!-- AD_PROJETOS_ICON_V7 -->
+    <!-- AD_PROJETOS_SPLASH_V1 -->
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+
+    <title>Alexandre Dias | Gestao de Projetos</title>
+
     <link rel="manifest" href="/manifest.webmanifest?v=7" />
     <link rel="icon" href="/favicon.ico?v=7" sizes="any" />
     <link rel="icon" type="image/png" href="/favicon.png?v=7" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=7" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=7" />
+
     <meta name="theme-color" content="#2d1d17" />
-    <meta name="application-name" content="AD Projetos" />
-    <meta name="apple-mobile-web-app-title" content="AD Projetos" />
-
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-
-    <title>AD Projetos</title>
-    <meta name="description" content="Alexandre Dias | Gestao de Projetos" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="AD Projetos" />
+    <meta name="application-name" content="AD Projetos" />
+    <meta name="description" content="Sistema premium para gestao de projetos de interiores." />
 
-    </head>
+    <style>
+      :root {
+        --ad-bg: #f6efe4;
+        --ad-brown: #2d1d17;
+        --ad-brown-soft: #4b3329;
+        --ad-cream: #fff8ee;
+        --ad-muted: #dcc3b3;
+        --ad-accent: #be7254;
+      }
+
+      html,
+      body {
+        margin: 0;
+        min-height: 100%;
+        background: var(--ad-bg);
+      }
+
+      .ad-splash {
+        position: fixed;
+        inset: 0;
+        z-index: 999999;
+        display: grid;
+        place-items: center;
+        overflow: hidden;
+        background:
+          radial-gradient(circle at 22% 18%, rgba(190, 114, 84, 0.22), transparent 34%),
+          radial-gradient(circle at 80% 78%, rgba(255, 248, 238, 0.16), transparent 36%),
+          linear-gradient(145deg, #2d1d17 0%, #3a251e 48%, #1f130f 100%);
+        transition:
+          opacity 720ms ease,
+          visibility 720ms ease,
+          transform 720ms ease;
+      }
+
+      .ad-splash::before {
+        content: "";
+        position: absolute;
+        inset: 20px;
+        border: 1px solid rgba(255, 248, 238, 0.08);
+        border-radius: 34px;
+        pointer-events: none;
+      }
+
+      .ad-splash__content {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 18px;
+        text-align: center;
+        transform: translateY(8px) scale(0.96);
+        opacity: 0;
+        animation: adSplashEnter 900ms cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+      }
+
+      .ad-splash__logo {
+        width: 118px;
+        height: 118px;
+        border-radius: 34px;
+        object-fit: cover;
+        box-shadow:
+          0 24px 70px rgba(0, 0, 0, 0.34),
+          0 0 0 1px rgba(255, 248, 238, 0.10);
+        animation: adLogoFloat 1700ms ease-in-out infinite alternate;
+      }
+
+      .ad-splash__brand {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .ad-splash__name {
+        margin: 0;
+        color: var(--ad-cream);
+        font-family: Georgia, "Times New Roman", serif;
+        font-size: clamp(2rem, 8vw, 3.2rem);
+        font-weight: 700;
+        letter-spacing: -0.06em;
+        line-height: 0.95;
+      }
+
+      .ad-splash__name span {
+        color: var(--ad-accent);
+      }
+
+      .ad-splash__label {
+        margin: 0;
+        color: rgba(255, 248, 238, 0.62);
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 0.7rem;
+        font-weight: 800;
+        letter-spacing: 0.38em;
+        text-transform: uppercase;
+      }
+
+      .ad-splash__loading {
+        width: min(190px, 48vw);
+        height: 3px;
+        overflow: hidden;
+        border-radius: 999px;
+        background: rgba(255, 248, 238, 0.13);
+      }
+
+      .ad-splash__loading span {
+        display: block;
+        width: 45%;
+        height: 100%;
+        border-radius: inherit;
+        background: linear-gradient(90deg, transparent, var(--ad-accent), var(--ad-cream));
+        animation: adLoading 1050ms ease-in-out infinite;
+      }
+
+      .ad-splash__text {
+        margin: 0;
+        color: rgba(255, 248, 238, 0.62);
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 0.82rem;
+        font-weight: 700;
+      }
+
+      .ad-splash.ad-splash--hide {
+        opacity: 0;
+        visibility: hidden;
+        transform: scale(1.015);
+        pointer-events: none;
+      }
+
+      @keyframes adSplashEnter {
+        from {
+          opacity: 0;
+          transform: translateY(16px) scale(0.94);
+          filter: blur(6px);
+        }
+
+        to {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+          filter: blur(0);
+        }
+      }
+
+      @keyframes adLogoFloat {
+        from {
+          transform: translateY(0) scale(1);
+        }
+
+        to {
+          transform: translateY(-4px) scale(1.025);
+        }
+      }
+
+      @keyframes adLoading {
+        0% {
+          transform: translateX(-110%);
+        }
+
+        100% {
+          transform: translateX(245%);
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .ad-splash,
+        .ad-splash__content,
+        .ad-splash__logo,
+        .ad-splash__loading span {
+          animation: none !important;
+          transition: opacity 300ms ease;
+        }
+
+        .ad-splash__content {
+          opacity: 1;
+          transform: none;
+        }
+      }
+    </style>
+  </head>
 
   <body>
+    <div id="ad-splash" class="ad-splash" aria-label="Abrindo AD Projetos">
+      <div class="ad-splash__content">
+        <img class="ad-splash__logo" src="/vite.svg?v=7" alt="AD Projetos" />
+
+        <div class="ad-splash__brand">
+          <p class="ad-splash__label">Gestao de projetos</p>
+          <h1 class="ad-splash__name">AD <span>Projetos</span></h1>
+        </div>
+
+        <div class="ad-splash__loading" aria-hidden="true">
+          <span></span>
+        </div>
+
+        <p class="ad-splash__text">Preparando seu painel...</p>
+      </div>
+    </div>
+
     <div id="root"></div>
+
+    <script>
+      window.addEventListener("load", function () {
+        var splash = document.getElementById("ad-splash");
+
+        window.setTimeout(function () {
+          if (!splash) return;
+
+          splash.classList.add("ad-splash--hide");
+
+          window.setTimeout(function () {
+            if (splash && splash.parentNode) {
+              splash.parentNode.removeChild(splash);
+            }
+          }, 820);
+        }, 1250);
+      });
+    </script>
+
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
-
