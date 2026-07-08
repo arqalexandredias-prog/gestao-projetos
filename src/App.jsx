@@ -5,6 +5,9 @@ const STORAGE_KEY = "alexandre-dias-gestao-projetos-v1";
 const PAGE_STORAGE_KEY = "alexandre-dias-gestao-projetos-pagina-atual";
 const CALENDAR_EVENTS_STORAGE_KEY = "alexandre-dias-gestao-projetos-eventos-calendario-v2";
 const CALENDAR_VIEW_STORAGE_KEY = "alexandre-dias-gestao-projetos-calendario-view";
+const CALENDAR_TAGS_STORAGE_KEY = "alexandre-dias-gestao-projetos-calendario-tags";
+const CALENDAR_SELECTED_DATE_STORAGE_KEY =
+  "alexandre-dias-gestao-projetos-calendario-data-selecionada";
 
 const STATUS_OPTIONS = ["Orçamento", "A receber", "Parcial", "Recebido", "Cancelado"];
 const VALID_PAGES = ["resumo", "projetos", "calendario"];
@@ -57,6 +60,10 @@ function addDays(date, amount) {
   return next;
 }
 
+function isValidDateString(value) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(String(value || ""));
+}
+
 function loadActivePage() {
   try {
     const savedPage = localStorage.getItem(PAGE_STORAGE_KEY);
@@ -72,6 +79,30 @@ function loadCalendarView() {
     return savedView === "semana" ? "semana" : "mes";
   } catch {
     return "mes";
+  }
+}
+
+function loadSelectedCalendarDate() {
+  try {
+    const savedDate = localStorage.getItem(CALENDAR_SELECTED_DATE_STORAGE_KEY);
+    return isValidDateString(savedDate) ? savedDate : todayISO();
+  } catch {
+    return todayISO();
+  }
+}
+
+function loadActiveCalendarTags() {
+  try {
+    const saved = localStorage.getItem(CALENDAR_TAGS_STORAGE_KEY);
+    const parsed = saved ? JSON.parse(saved) : null;
+    const validTagIds = CALENDAR_TAGS.map((tag) => tag.id);
+
+    if (!Array.isArray(parsed)) return validTagIds;
+
+    const filtered = parsed.filter((tagId) => validTagIds.includes(tagId));
+    return filtered.length ? filtered : validTagIds;
+  } catch {
+    return CALENDAR_TAGS.map((tag) => tag.id);
   }
 }
 
@@ -958,6 +989,7 @@ function CalendarPage({
 
   function selectDay(date) {
     setSelectedCalendarDate(date);
+    localStorage.setItem(CALENDAR_SELECTED_DATE_STORAGE_KEY, date);
 
     window.setTimeout(() => {
       detailRef.current?.scrollIntoView({
@@ -1150,6 +1182,8 @@ function CalendarPage({
 }
 
 export default function App() {
+  const initialSelectedCalendarDate = loadSelectedCalendarDate();
+
   const [projects, setProjects] = useState(loadProjects);
   const [calendarEvents, setCalendarEvents] = useState(loadCalendarEvents);
   const [activePage, setActivePage] = useState(loadActivePage);
@@ -1159,12 +1193,12 @@ export default function App() {
   const [editingId, setEditingId] = useState(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
 
-  const [selectedMonth, setSelectedMonth] = useState(todayISO().slice(0, 7));
+  const [selectedMonth, setSelectedMonth] = useState(initialSelectedCalendarDate.slice(0, 7));
   const [statusFilter, setStatusFilter] = useState("Todos");
   const [search, setSearch] = useState("");
 
-  const [activeCalendarTags, setActiveCalendarTags] = useState(CALENDAR_TAGS.map((tag) => tag.id));
-  const [selectedCalendarDate, setSelectedCalendarDate] = useState(todayISO());
+  const [activeCalendarTags, setActiveCalendarTags] = useState(loadActiveCalendarTags);
+  const [selectedCalendarDate, setSelectedCalendarDate] = useState(initialSelectedCalendarDate);
 
   const [isCreateChoiceOpen, setIsCreateChoiceOpen] = useState(false);
   const [calendarEventForm, setCalendarEventForm] = useState(null);
@@ -1184,6 +1218,14 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem(CALENDAR_VIEW_STORAGE_KEY, calendarView);
   }, [calendarView]);
+
+  useEffect(() => {
+    localStorage.setItem(CALENDAR_TAGS_STORAGE_KEY, JSON.stringify(activeCalendarTags));
+  }, [activeCalendarTags]);
+
+  useEffect(() => {
+    localStorage.setItem(CALENDAR_SELECTED_DATE_STORAGE_KEY, selectedCalendarDate);
+  }, [selectedCalendarDate]);
 
   const monthProjects = useMemo(() => {
     if (!selectedMonth) return projects;
