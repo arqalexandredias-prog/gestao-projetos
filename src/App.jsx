@@ -1107,14 +1107,15 @@ function ColorPicker({ value, onChange }) {
 function SummaryCard({ icon, label, value, helper, tone = "neutral", onClick }) {
   const cardStyle = {
     width: "100%",
-    minHeight: 118,
-    padding: "16px 16px 14px",
+    minHeight: 76,
+    padding: "11px 12px",
     textAlign: "left",
     cursor: onClick ? "pointer" : "default",
     display: "grid",
-    alignContent: "space-between",
-    gap: 12,
-    borderRadius: 24,
+    gridTemplateColumns: "32px minmax(0, 1fr)",
+    alignItems: "center",
+    gap: 10,
+    borderRadius: 20,
   };
 
   const content = (
@@ -1122,22 +1123,25 @@ function SummaryCard({ icon, label, value, helper, tone = "neutral", onClick }) 
       <div
         className="summary-icon"
         style={{
-          width: 38,
-          height: 38,
-          marginBottom: 8,
-          fontSize: "0.85rem",
+          width: 30,
+          height: 30,
+          marginBottom: 0,
+          fontSize: "0.72rem",
         }}
       >
         {icon}
       </div>
 
-      <div>
+      <div style={{ minWidth: 0 }}>
         <span
           style={{
             display: "block",
-            marginBottom: 7,
-            fontSize: "0.86rem",
-            lineHeight: 1.15,
+            marginBottom: 4,
+            fontSize: "0.72rem",
+            lineHeight: 1.1,
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
           }}
         >
           {label}
@@ -1146,9 +1150,12 @@ function SummaryCard({ icon, label, value, helper, tone = "neutral", onClick }) 
         <strong
           style={{
             display: "block",
-            fontSize: "1.35rem",
-            lineHeight: 1.05,
+            fontSize: "1.06rem",
+            lineHeight: 1.02,
             letterSpacing: "-0.05em",
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
           }}
         >
           {value}
@@ -1158,9 +1165,12 @@ function SummaryCard({ icon, label, value, helper, tone = "neutral", onClick }) 
           <small
             style={{
               display: "block",
-              marginTop: 8,
-              fontSize: "0.78rem",
-              lineHeight: 1.2,
+              marginTop: 5,
+              fontSize: "0.66rem",
+              lineHeight: 1.1,
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
             }}
           >
             {helper}
@@ -3695,7 +3705,7 @@ export default function App() {
         if (dateA !== dateB) return dateA.localeCompare(dateB);
         return getProjectOrderValue(b.project).localeCompare(getProjectOrderValue(a.project));
       })
-      .slice(0, 5);
+      .slice(0, 3);
 
     const focusItems = [
       ...urgentTasks.slice(0, 3),
@@ -4563,28 +4573,29 @@ export default function App() {
         </div>
 
         {activePage === "resumo" ? (
-          <section className="page-section">
+          <section className="page-section" style={{ gap: 10 }}>
             <section
               className="hero welcome-card"
               style={{
                 minHeight: "auto",
-                padding: "18px 22px",
-                marginBottom: 16,
+                padding: "12px 16px",
+                marginBottom: 12,
+                borderRadius: 22,
               }}
             >
               <h1
                 style={{
                   margin: 0,
-                  fontSize: "clamp(2.05rem, 8.5vw, 3.65rem)",
-                  lineHeight: 0.95,
-                  letterSpacing: "-0.07em",
+                  fontSize: "clamp(1.42rem, 5.6vw, 2rem)",
+                  lineHeight: 0.98,
+                  letterSpacing: "-0.065em",
                 }}
               >
                 Vamos criar algo incrível, <span>Alexandre?</span>
               </h1>
             </section>
 
-            <section className="summary-grid" style={{ gap: 12, marginBottom: 18 }}>
+            <section className="summary-grid" style={{ gap: 10, marginBottom: 12 }}>
               <SummaryCard
                 icon="▢"
                 label="Vendido no mês"
@@ -4636,21 +4647,25 @@ export default function App() {
               />
             </section>
 
-            <section className="dashboard-grid" style={{ gap: 14, marginTop: 4 }}>
+            <section className="dashboard-grid" style={{ gap: 10, marginTop: 2 }}>
               <div
                 className="panel side-panel"
                 style={{
-                  padding: 20,
-                  borderRadius: 28,
+                  padding: 14,
+                  borderRadius: 22,
                 }}
               >
-                <div className="panel-header compact" style={{ marginBottom: 14 }}>
+                <div className="panel-header compact" style={{ marginBottom: 8 }}>
                   <div>
                     <p>Central</p>
-                    <h2 style={{ fontSize: "1.55rem", lineHeight: 1.05 }}>Projetos em andamento</h2>
+                    <h2 style={{ fontSize: "1.18rem", lineHeight: 1.02 }}>Projetos em andamento</h2>
                   </div>
 
-                  <button type="button" onClick={() => setActivePage("projetos")}>
+                  <button
+                    type="button"
+                    onClick={() => setActivePage("projetos")}
+                    style={{ fontSize: "0.82rem", lineHeight: 1.05 }}
+                  >
                     Ver projetos
                   </button>
                 </div>
@@ -4659,8 +4674,8 @@ export default function App() {
                   className="project-lines"
                   style={{
                     display: "grid",
-                    gap: 7,
-                    maxHeight: 330,
+                    gap: 6,
+                    maxHeight: 166,
                     overflowY: "auto",
                     paddingRight: 2,
                   }}
@@ -4680,16 +4695,16 @@ export default function App() {
                               display: "grid",
                               gridTemplateColumns: "auto minmax(0, 1fr) auto",
                               alignItems: "center",
-                              gap: 9,
-                              padding: "8px 10px",
-                              minHeight: 54,
-                              borderRadius: 18,
+                              gap: 8,
+                              padding: "7px 9px",
+                              minHeight: 44,
+                              borderRadius: 15,
                             }}
                           >
                             <span
                               style={{
-                                width: 6,
-                                height: 30,
+                                width: 5,
+                                height: 26,
                                 borderRadius: 999,
                                 backgroundColor: item.project.color || EVENT_COLORS[0],
                               }}
@@ -4702,11 +4717,9 @@ export default function App() {
                                   whiteSpace: "nowrap",
                                   overflow: "hidden",
                                   textOverflow: "ellipsis",
-                                  fontSize: "0.8rem",
-                                  lineHeight: 1.15,
-                                  marginTop: 3,
-                                  fontSize: "0.95rem",
-                                  lineHeight: 1.1,
+                                  fontSize: "0.86rem",
+                                  lineHeight: 1.05,
+                                  marginTop: 1,
                                 }}
                               >
                                 {getProjectClient(item.project)}
@@ -4718,13 +4731,15 @@ export default function App() {
                                   whiteSpace: "nowrap",
                                   overflow: "hidden",
                                   textOverflow: "ellipsis",
+                                  fontSize: "0.72rem",
+                                  lineHeight: 1.12,
                                 }}
                               >
                                 {item.project.projectCode || "Sem código"} · {getProjectTitle(item.project)}
                               </span>
                             </div>
 
-                            <span style={{ whiteSpace: "nowrap", fontSize: "0.82rem" }}>{deadlineLabel}</span>
+                            <span style={{ whiteSpace: "nowrap", fontSize: "0.72rem" }}>{deadlineLabel}</span>
                           </button>
                         );
                       })}
@@ -4734,7 +4749,7 @@ export default function App() {
                           type="button"
                           className="soft-empty"
                           onClick={() => setActivePage("projetos")}
-                          style={{ cursor: "pointer", padding: "10px 12px", borderRadius: 18 }}
+                          style={{ cursor: "pointer", padding: "8px 10px", borderRadius: 15, fontSize: "0.75rem" }}
                         >
                           +{summary.active - dashboardHub.projectCards.length} projetos ativos na aba Projetos
                         </button>
@@ -4743,7 +4758,7 @@ export default function App() {
                   ) : (
                     <div
                       className="soft-empty"
-                      style={{ padding: "14px 12px", minHeight: 0, borderRadius: 18, fontSize: "0.86rem" }}
+                      style={{ padding: "10px 10px", minHeight: 0, borderRadius: 15, fontSize: "0.76rem" }}
                     >
                       Nenhum projeto ativo para acompanhar agora.
                     </div>
@@ -4754,15 +4769,19 @@ export default function App() {
               <aside className="side-stack">
                 <div
                   className="panel side-panel"
-                  style={{ padding: 20, borderRadius: 28 }}
+                  style={{ padding: 14, borderRadius: 22 }}
                 >
-                  <div className="panel-header compact" style={{ marginBottom: 14 }}>
+                  <div className="panel-header compact" style={{ marginBottom: 8 }}>
                     <div>
                       <p>Atenção</p>
-                      <h2 style={{ fontSize: "1.45rem", lineHeight: 1.05 }}>Prioridades do dia</h2>
+                      <h2 style={{ fontSize: "1.12rem", lineHeight: 1.02 }}>Prioridades do dia</h2>
                     </div>
 
-                    <button type="button" onClick={() => setActivePage("calendario")}>
+                    <button
+                      type="button"
+                      onClick={() => setActivePage("calendario")}
+                      style={{ fontSize: "0.82rem", lineHeight: 1.05 }}
+                    >
                       Calendário
                     </button>
                   </div>
@@ -4775,7 +4794,7 @@ export default function App() {
                           className="launch-line"
                           key={item.id}
                           onClick={() => openProjectDetails(item.project, item.project.projectCode)}
-                          style={{ padding: "9px 10px", minHeight: 54, borderRadius: 18 }}
+                          style={{ padding: "7px 9px", minHeight: 44, borderRadius: 15 }}
                         >
                           <div>
                             <strong>
@@ -4793,7 +4812,7 @@ export default function App() {
                     ) : (
                       <div
                         className="soft-empty"
-                        style={{ padding: "14px 12px", minHeight: 0, borderRadius: 18, fontSize: "0.86rem" }}
+                        style={{ padding: "10px 10px", minHeight: 0, borderRadius: 15, fontSize: "0.76rem" }}
                       >
                         Nenhuma tarefa, etapa ou orçamento urgente agora.
                       </div>
@@ -4803,15 +4822,19 @@ export default function App() {
 
                 <div
                   className="panel side-panel"
-                  style={{ padding: 20, borderRadius: 28 }}
+                  style={{ padding: 14, borderRadius: 22 }}
                 >
-                  <div className="panel-header compact" style={{ marginBottom: 14 }}>
+                  <div className="panel-header compact" style={{ marginBottom: 8 }}>
                     <div>
                       <p>Próximos</p>
-                      <h2 style={{ fontSize: "1.45rem", lineHeight: 1.05 }}>Entregas e lançamentos</h2>
+                      <h2 style={{ fontSize: "1.12rem", lineHeight: 1.02 }}>Entregas e lançamentos</h2>
                     </div>
 
-                    <button type="button" onClick={() => setActivePage("calendario")}>
+                    <button
+                      type="button"
+                      onClick={() => setActivePage("calendario")}
+                      style={{ fontSize: "0.82rem", lineHeight: 1.05 }}
+                    >
                       Ver calendário
                     </button>
                   </div>
@@ -4824,7 +4847,7 @@ export default function App() {
                           className="launch-line"
                           key={project.id}
                           onClick={() => openProjectDetails(project, project.projectCode)}
-                          style={{ padding: "9px 10px", minHeight: 54, borderRadius: 18 }}
+                          style={{ padding: "7px 9px", minHeight: 44, borderRadius: 15 }}
                         >
                           <div>
                             <strong>{project.client || "Cliente sem nome"}</strong>
@@ -4837,7 +4860,7 @@ export default function App() {
                     ) : (
                       <div
                         className="soft-empty"
-                        style={{ padding: "14px 12px", minHeight: 0, borderRadius: 18, fontSize: "0.86rem" }}
+                        style={{ padding: "10px 10px", minHeight: 0, borderRadius: 15, fontSize: "0.76rem" }}
                       >
                         Nenhum próximo lançamento cadastrado.
                       </div>
