@@ -1282,21 +1282,10 @@ function ProjectMobileList({ projects, emptyMessage, onOpenDetails }) {
   if (!projects.length) return <div className="empty-state">{emptyMessage}</div>;
 
   return (
-    <div
-      className="projects-premium-list"
-      style={{
-        borderRadius: 22,
-        overflow: "hidden",
-      }}
-    >
+    <div className="projects-premium-list" style={{ borderRadius: 24, overflow: "hidden" }}>
       <div
         className="projects-premium-head"
-        style={{
-          padding: "12px 20px",
-          minHeight: "auto",
-          fontSize: "0.7rem",
-          letterSpacing: "0.22em",
-        }}
+        style={{ padding: "12px 18px", minHeight: 48, fontSize: "0.8rem", letterSpacing: "0.16em" }}
       >
         <span>Código</span>
         <span>Projeto</span>
@@ -1312,63 +1301,21 @@ function ProjectMobileList({ projects, emptyMessage, onOpenDetails }) {
             className="projects-premium-row"
             onClick={() => onOpenDetails(project, code)}
             style={{
-              gridTemplateColumns: "74px 1fr 16px",
-              minHeight: 66,
-              padding: "12px 20px",
+              minHeight: 92,
+              padding: "14px 18px",
               gap: 12,
             }}
           >
-            <span
-              className="projects-premium-code"
-              style={{
-                fontSize: "0.9rem",
-                letterSpacing: "0.04em",
-                lineHeight: 1,
-              }}
-            >
-              {code}
-            </span>
+            <span className="projects-premium-code" style={{ fontSize: "0.92rem" }}>{code}</span>
 
-            <span
-              className="projects-premium-info"
-              style={{
-                gap: 3,
-                minWidth: 0,
-              }}
-            >
-              <strong
-                style={{
-                  fontSize: "0.98rem",
-                  lineHeight: 1.08,
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  maxWidth: "100%",
-                }}
-              >
-                {getProjectTitle(project)}
-              </strong>
-              <small
-                style={{
-                  fontSize: "0.82rem",
-                  lineHeight: 1.1,
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  maxWidth: "100%",
-                }}
-              >
-                {getProjectClient(project)}
-              </small>
+            <span className="projects-premium-info" style={{ gap: 2 }}>
+              <strong style={{ fontSize: "0.98rem", lineHeight: 1.12 }}>{getProjectTitle(project)}</strong>
+              <small style={{ fontSize: "0.74rem", lineHeight: 1.08 }}>{getProjectClient(project)}</small>
             </span>
 
             <span
               className="projects-premium-status"
-              style={{
-                width: 9,
-                height: 9,
-                backgroundColor: project.color || EVENT_COLORS[0],
-              }}
+              style={{ backgroundColor: project.color || EVENT_COLORS[0], width: 14, height: 14 }}
             />
           </button>
         );
@@ -4957,44 +4904,34 @@ export default function App() {
         {activePage === "projetos" ? (
           <section className="page-section">
             <section
-              className="hero hero-small"
               style={{
-                padding: "10px 26px 12px",
-                gap: 10,
-                marginBottom: 10,
-                minHeight: "auto",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "flex-start",
+                marginBottom: 12,
+                padding: "0 6px 0 0",
               }}
             >
-              <div>
-                <p style={{ marginBottom: 5, fontSize: "0.68rem", letterSpacing: "0.18em" }}>
-                  Controle
-                </p>
-                <h1 style={{ fontSize: "clamp(1.55rem, 6vw, 2rem)", lineHeight: 0.96 }}>
-                  Projetos
-                </h1>
-              </div>
-
               <button
                 type="button"
                 className="primary-button"
                 onClick={() => openNewProject()}
                 style={{
                   width: "fit-content",
-                  minWidth: 122,
-                  minHeight: 34,
+                  minWidth: 132,
+                  minHeight: 32,
                   padding: "0 14px",
                   borderRadius: 14,
                   fontSize: "0.72rem",
                   letterSpacing: "-0.02em",
-                  alignSelf: "flex-start",
-                  boxShadow: "0 10px 20px rgba(45, 29, 23, 0.14)",
+                  boxShadow: "0 8px 18px rgba(45, 29, 23, 0.12)",
                 }}
               >
                 + Novo projeto
               </button>
             </section>
 
-            <div className="filters">
+            <div className="filters" style={{ marginTop: 0 }}>
               <input
                 type="search"
                 value={search}
