@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import "./App.css";
 
 const STORAGE_KEY = "alexandre-dias-gestao-projetos-v1";
 const PAGE_STORAGE_KEY = "alexandre-dias-gestao-projetos-pagina-atual";
-const CALENDAR_EVENTS_STORAGE_KEY = "alexandre-dias-gestao-projetos-eventos-calendario-v1";
+const CALENDAR_EVENTS_STORAGE_KEY = "alexandre-dias-gestao-projetos-eventos-calendario-v2";
 
 const STATUS_OPTIONS = ["Orçamento", "A receber", "Parcial", "Recebido", "Cancelado"];
 const VALID_PAGES = ["resumo", "projetos", "calendario"];
@@ -17,21 +17,16 @@ const CALENDAR_TAGS = [
 ];
 
 const EVENT_COLORS = [
-  "#3b82f6",
-  "#22c55e",
-  "#f59e0b",
-  "#8b5cf6",
-  "#ec4899",
-  "#14b8a6",
   "#c47a5a",
   "#2563eb",
-  "#0f766e",
-  "#84cc16",
-  "#a855f7",
-  "#d946ef",
-  "#0891b2",
+  "#7c3aed",
+  "#16a34a",
+  "#f59e0b",
   "#dc2626",
-  "#475569",
+  "#0891b2",
+  "#db2777",
+  "#0f766e",
+  "#9333ea",
 ];
 
 function todayISO() {
@@ -48,11 +43,6 @@ function createId() {
 function toISODate(date) {
   const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
   return local.toISOString().slice(0, 10);
-}
-
-function parseISODate(dateString) {
-  const [year, month, day] = String(dateString).split("-").map(Number);
-  return new Date(year, month - 1, day);
 }
 
 function addDays(date, amount) {
@@ -134,6 +124,19 @@ function formatDate(dateString) {
   return `${day}/${month}/${year}`;
 }
 
+function formatLongDate(dateString) {
+  if (!dateString) return "";
+
+  const [year, month, day] = dateString.split("-").map(Number);
+  const date = new Date(year, month - 1, day);
+
+  return new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  }).format(date);
+}
+
 function formatMonthLabel(monthString) {
   if (!monthString) return "Todos os meses";
 
@@ -201,6 +204,20 @@ function emptyProjectForm(date = todayISO()) {
     receivedDate: "",
     status: "A receber",
     note: "",
+    color: EVENT_COLORS[0],
+  };
+}
+
+function emptyCalendarEvent(date = todayISO(), tag = "Compromissos") {
+  return {
+    id: "",
+    title: "",
+    date,
+    tag,
+    startTime: "",
+    endTime: "",
+    color: EVENT_COLORS[1],
+    description: "",
   };
 }
 
@@ -271,6 +288,27 @@ function BrandLogo() {
 
 function StatusBadge({ status }) {
   return <span className={`status status-${getStatusClass(status)}`}>{status}</span>;
+}
+
+function ColorPicker({ value, onChange }) {
+  return (
+    <div className="color-field">
+      <span>Cor no calendário</span>
+
+      <div className="color-options">
+        {EVENT_COLORS.map((color) => (
+          <button
+            type="button"
+            key={color}
+            className={`color-dot ${value === color ? "active" : ""}`}
+            style={{ backgroundColor: color }}
+            onClick={() => onChange(color)}
+            aria-label={`Selecionar cor ${color}`}
+          />
+        ))}
+      </div>
+    </div>
+  );
 }
 
 function SummaryCard({ icon, label, value, helper, tone = "neutral" }) {
@@ -411,8 +449,8 @@ function ProjectFormModal({ form, setForm, editingId, onClose, onSubmit }) {
       <div className="modal project-modal">
         <div className="modal-header">
           <div>
-            <p>{editingId ? "Editar lançamento" : "Novo lançamento"}</p>
-            <h2>{editingId ? "Editar projeto" : "Cadastrar projeto"}</h2>
+            <p>{editingId ? "Editar projeto" : "Novo projeto"}</p>
+            <h2>{editingId ? "Editar cliente/projeto" : "Cadastrar cliente/projeto"}</h2>
           </div>
 
           <button type="button" className="icon-button" onClick={onClose}>
@@ -557,6 +595,13 @@ function ProjectFormModal({ form, setForm, editingId, onClose, onSubmit }) {
             </select>
           </label>
 
+          <div className="form-wide">
+            <ColorPicker
+              value={form.color || EVENT_COLORS[0]}
+              onChange={(color) => setForm((prev) => ({ ...prev, color }))}
+            />
+          </div>
+
           <label className="form-wide">
             Observação
             <textarea
@@ -599,6 +644,150 @@ function ProjectFormModal({ form, setForm, editingId, onClose, onSubmit }) {
   );
 }
 
+function CalendarEventFormModal({ eventForm, setEventForm, onClose, onSubmit }) {
+  const isEditing = Boolean(eventForm.id);
+
+  return (
+    <div className="calendar-form-backdrop">
+      <div className="calendar-form-modal">
+        <div className="calendar-form-header">
+          <div>
+            <p>{isEditing ? "Editar compromisso" : "Novo compromisso"}</p>
+            <h2>{isEditing ? "Editar anotação" : "Cadastrar anotação"}</h2>
+          </div>
+
+          <button type="button" onClick={onClose}>
+            ×
+          </button>
+        </div>
+
+        <form className="calendar-event-form" onSubmit={onSubmit}>
+          <label>
+            Título
+            <input
+              type="text"
+              value={eventForm.title}
+              placeholder="Ex: Reunião com cliente"
+              onChange={(event) =>
+                setEventForm((prev) => ({ ...prev, title: event.target.value }))
+              }
+              required
+            />
+          </label>
+
+          <label>
+            Data
+            <input
+              type="date"
+              value={eventForm.date}
+              onChange={(event) => setEventForm((prev) => ({ ...prev, date: event.target.value }))}
+              required
+            />
+          </label>
+
+          <div className="event-time-grid">
+            <label>
+              Início
+              <input
+                type="time"
+                value={eventForm.startTime}
+                onChange={(event) =>
+                  setEventForm((prev) => ({ ...prev, startTime: event.target.value }))
+                }
+              />
+            </label>
+
+            <label>
+              Fim
+              <input
+                type="time"
+                value={eventForm.endTime}
+                onChange={(event) =>
+                  setEventForm((prev) => ({ ...prev, endTime: event.target.value }))
+                }
+              />
+            </label>
+          </div>
+
+          <label>
+            Tag
+            <select
+              value={eventForm.tag}
+              onChange={(event) => setEventForm((prev) => ({ ...prev, tag: event.target.value }))}
+            >
+              {CALENDAR_TAGS.filter((tag) => tag.id !== "Projeto").map((tag) => (
+                <option key={tag.id} value={tag.id}>
+                  {tag.label}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <ColorPicker
+            value={eventForm.color || EVENT_COLORS[1]}
+            onChange={(color) => setEventForm((prev) => ({ ...prev, color }))}
+          />
+
+          <label>
+            Observação
+            <textarea
+              rows="3"
+              value={eventForm.description}
+              placeholder="Detalhes opcionais"
+              onChange={(event) =>
+                setEventForm((prev) => ({ ...prev, description: event.target.value }))
+              }
+            />
+          </label>
+
+          <div className="calendar-form-actions">
+            <button type="button" className="secondary-button" onClick={onClose}>
+              Cancelar
+            </button>
+
+            <button type="submit" className="primary-button">
+              {isEditing ? "Salvar" : "Cadastrar"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function CalendarCreateTypeModal({ date, onClose, onChooseProject, onChooseEvent }) {
+  return (
+    <div className="calendar-form-backdrop">
+      <div className="calendar-choice-modal">
+        <div className="calendar-form-header">
+          <div>
+            <p>Cadastrar em {formatDate(date)}</p>
+            <h2>O que você quer adicionar?</h2>
+          </div>
+
+          <button type="button" onClick={onClose}>
+            ×
+          </button>
+        </div>
+
+        <div className="calendar-choice-list">
+          <button type="button" onClick={onChooseProject}>
+            <strong>Projeto</strong>
+            <span>Abre o cadastro de cliente/projeto</span>
+          </button>
+
+          {CALENDAR_TAGS.filter((tag) => tag.id !== "Projeto").map((tag) => (
+            <button type="button" key={tag.id} onClick={() => onChooseEvent(tag.id)}>
+              <strong>{tag.label}</strong>
+              <span>Cadastra uma anotação no calendário</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ProjectListItem({ project, onEdit }) {
   return (
     <button type="button" className="project-line" onClick={() => onEdit(project)}>
@@ -617,249 +806,6 @@ function ProjectListItem({ project, onEdit }) {
   );
 }
 
-function CalendarEventForm({ selectedDate, onSave, onCancel }) {
-  const [eventForm, setEventForm] = useState({
-    title: "",
-    date: selectedDate,
-    tag: "Compromissos",
-    startTime: "",
-    endTime: "",
-    color: EVENT_COLORS[0],
-    description: "",
-  });
-
-  function updateField(field, value) {
-    setEventForm((prev) => ({ ...prev, [field]: value }));
-  }
-
-  function submitEvent(event) {
-    event.preventDefault();
-
-    if (!eventForm.title.trim()) {
-      window.alert("Informe o título do compromisso.");
-      return;
-    }
-
-    onSave({
-      id: createId(),
-      kind: "manual",
-      title: eventForm.title.trim(),
-      date: eventForm.date,
-      tag: eventForm.tag,
-      startTime: eventForm.startTime,
-      endTime: eventForm.endTime,
-      color: eventForm.color,
-      description: eventForm.description.trim(),
-      createdAt: new Date().toISOString(),
-    });
-  }
-
-  return (
-    <form className="calendar-event-form" onSubmit={submitEvent}>
-      <h3>Novo compromisso</h3>
-
-      <label>
-        Título
-        <input
-          type="text"
-          value={eventForm.title}
-          placeholder="Nome do compromisso"
-          onChange={(event) => updateField("title", event.target.value)}
-        />
-      </label>
-
-      <label>
-        Data
-        <input
-          type="date"
-          value={eventForm.date}
-          onChange={(event) => updateField("date", event.target.value)}
-        />
-      </label>
-
-      <div className="event-time-grid">
-        <label>
-          Hora início
-          <input
-            type="time"
-            value={eventForm.startTime}
-            onChange={(event) => updateField("startTime", event.target.value)}
-          />
-        </label>
-
-        <label>
-          Hora fim
-          <input
-            type="time"
-            value={eventForm.endTime}
-            onChange={(event) => updateField("endTime", event.target.value)}
-          />
-        </label>
-      </div>
-
-      <label>
-        Tag
-        <select value={eventForm.tag} onChange={(event) => updateField("tag", event.target.value)}>
-          {CALENDAR_TAGS.filter((tag) => tag.id !== "Projeto").map((tag) => (
-            <option key={tag.id} value={tag.id}>
-              {tag.label}
-            </option>
-          ))}
-        </select>
-      </label>
-
-      <div className="color-field">
-        <span>Cor</span>
-
-        <div className="color-options">
-          {EVENT_COLORS.map((color) => (
-            <button
-              type="button"
-              key={color}
-              className={`color-dot ${eventForm.color === color ? "active" : ""}`}
-              style={{ backgroundColor: color }}
-              onClick={() => updateField("color", color)}
-              aria-label={`Selecionar cor ${color}`}
-            />
-          ))}
-        </div>
-      </div>
-
-      <label>
-        Descrição
-        <textarea
-          rows="3"
-          value={eventForm.description}
-          placeholder="Observações opcionais"
-          onChange={(event) => updateField("description", event.target.value)}
-        />
-      </label>
-
-      <div className="calendar-event-form-actions">
-        <button type="button" className="secondary-button" onClick={onCancel}>
-          Cancelar
-        </button>
-
-        <button type="submit" className="calendar-save-button">
-          Salvar
-        </button>
-      </div>
-    </form>
-  );
-}
-
-function CalendarDayModal({
-  date,
-  events,
-  activeTags,
-  onClose,
-  onCreateEvent,
-  onDeleteEvent,
-  onEditProject,
-}) {
-  const [isCreating, setIsCreating] = useState(false);
-
-  const filteredEvents = events
-    .filter((event) => activeTags.includes(event.tag))
-    .sort((a, b) => {
-      const timeA = a.startTime || "99:99";
-      const timeB = b.startTime || "99:99";
-      return timeA.localeCompare(timeB);
-    });
-
-  return (
-    <div className="calendar-modal-backdrop">
-      <div className="calendar-modal">
-        <div className="calendar-modal-header">
-          <div>
-            <h2>{formatDate(date)}</h2>
-            <span>{filteredEvents.length} item(ns) neste dia</span>
-          </div>
-
-          <button type="button" className="calendar-close-button" onClick={onClose}>
-            ×
-          </button>
-        </div>
-
-        {!isCreating ? (
-          <>
-            <div className="calendar-modal-section">
-              <div className="calendar-modal-section-header">
-                <h3>Compromissos</h3>
-
-                <button
-                  type="button"
-                  className="calendar-add-button"
-                  onClick={() => setIsCreating(true)}
-                >
-                  + Cadastrar
-                </button>
-              </div>
-
-              {filteredEvents.length ? (
-                <div className="calendar-modal-events">
-                  {filteredEvents.map((event) => (
-                    <article className="calendar-modal-event-card" key={event.id}>
-                      <div
-                        className="calendar-event-color-line"
-                        style={{ backgroundColor: event.color }}
-                      />
-
-                      <div className="calendar-modal-event-content">
-                        <div className="calendar-modal-event-top">
-                          <div>
-                            <strong>{event.title}</strong>
-                            <span>{getTagLabel(event.tag)}</span>
-                          </div>
-
-                          {event.startTime || event.endTime ? (
-                            <small>
-                              {event.startTime || "--:--"}
-                              {event.endTime ? ` às ${event.endTime}` : ""}
-                            </small>
-                          ) : null}
-                        </div>
-
-                        {event.subtitle ? <p>{event.subtitle}</p> : null}
-                        {event.description ? <p>{event.description}</p> : null}
-
-                        <div className="calendar-modal-event-actions">
-                          {event.kind === "project" ? (
-                            <button type="button" onClick={() => onEditProject(event.project)}>
-                              Editar projeto
-                            </button>
-                          ) : (
-                            <button type="button" className="danger" onClick={() => onDeleteEvent(event.id)}>
-                              Excluir
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    </article>
-                  ))}
-                </div>
-              ) : (
-                <div className="calendar-empty-modal">
-                  Nenhum compromisso cadastrado para as tags selecionadas.
-                </div>
-              )}
-            </div>
-          </>
-        ) : (
-          <CalendarEventForm
-            selectedDate={date}
-            onSave={(payload) => {
-              onCreateEvent(payload);
-              setIsCreating(false);
-            }}
-            onCancel={() => setIsCreating(false)}
-          />
-        )}
-      </div>
-    </div>
-  );
-}
-
 function CalendarPage({
   month,
   setMonth,
@@ -869,12 +815,12 @@ function CalendarPage({
   setActiveCalendarTags,
   selectedCalendarDate,
   setSelectedCalendarDate,
-  isDayModalOpen,
-  setIsDayModalOpen,
-  onCreateCalendarEvent,
-  onDeleteCalendarEvent,
+  onOpenCreateChoice,
   onEditProject,
+  onEditCalendarEvent,
+  onDeleteCalendarEvent,
 }) {
+  const detailRef = useRef(null);
   const monthToUse = month || todayISO().slice(0, 7);
   const monthCells = getMonthCells(monthToUse);
 
@@ -886,7 +832,7 @@ function CalendarPage({
       title: project.client || project.development || project.project || "Projeto",
       subtitle: project.development || project.project || "",
       date: project.date,
-      color: "#c47a5a",
+      color: project.color || EVENT_COLORS[0],
       project,
     }));
   }, [projects]);
@@ -908,8 +854,14 @@ function CalendarPage({
   }, [filteredCalendarEvents]);
 
   const selectedDayEvents = useMemo(() => {
-    return allCalendarEvents.filter((event) => event.date === selectedCalendarDate);
-  }, [allCalendarEvents, selectedCalendarDate]);
+    return filteredCalendarEvents
+      .filter((event) => event.date === selectedCalendarDate)
+      .sort((a, b) => {
+        const timeA = a.startTime || "99:99";
+        const timeB = b.startTime || "99:99";
+        return timeA.localeCompare(timeB);
+      });
+  }, [filteredCalendarEvents, selectedCalendarDate]);
 
   function changeMonth(direction) {
     const [year, monthNumber] = monthToUse.split("-").map(Number);
@@ -928,9 +880,15 @@ function CalendarPage({
     });
   }
 
-  function openDay(date) {
+  function selectDay(date) {
     setSelectedCalendarDate(date);
-    setIsDayModalOpen(true);
+
+    window.setTimeout(() => {
+      detailRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }, 80);
   }
 
   return (
@@ -991,7 +949,7 @@ function CalendarPage({
                 className={`reference-calendar-day ${!cell.isCurrentMonth ? "muted" : ""} ${
                   cell.isToday ? "today" : ""
                 } ${isSelected ? "selected" : ""}`}
-                onClick={() => openDay(cell.iso)}
+                onClick={() => selectDay(cell.iso)}
               >
                 <span className="reference-day-number">{cell.day}</span>
 
@@ -1007,7 +965,7 @@ function CalendarPage({
                   ))}
 
                   {dayEvents.length > 3 ? (
-                    <small className="reference-more-events">+{dayEvents.length - 3}</small>
+                    <small className="reference-more-events">+{dayEvents.length - 3} mais</small>
                   ) : null}
                 </div>
               </button>
@@ -1016,20 +974,77 @@ function CalendarPage({
         </div>
       </div>
 
-      {isDayModalOpen ? (
-        <CalendarDayModal
-          date={selectedCalendarDate}
-          events={selectedDayEvents}
-          activeTags={activeCalendarTags}
-          onClose={() => setIsDayModalOpen(false)}
-          onCreateEvent={onCreateCalendarEvent}
-          onDeleteEvent={onDeleteCalendarEvent}
-          onEditProject={(project) => {
-            setIsDayModalOpen(false);
-            onEditProject(project);
-          }}
-        />
-      ) : null}
+      <section className="calendar-day-details" ref={detailRef}>
+        <div className="calendar-day-details-header">
+          <div>
+            <h2>{formatLongDate(selectedCalendarDate)}</h2>
+          </div>
+
+          <button type="button" onClick={() => onOpenCreateChoice(selectedCalendarDate)}>
+            + Cadastrar
+          </button>
+        </div>
+
+        <div className="calendar-day-details-body">
+          <h3>Compromissos</h3>
+
+          {selectedDayEvents.length ? (
+            <div className="calendar-day-event-list">
+              {selectedDayEvents.map((event) => (
+                <article className="calendar-day-event-card" key={event.id}>
+                  <span className="calendar-day-event-dot" style={{ backgroundColor: event.color }} />
+
+                  <div className="calendar-day-event-content">
+                    <div className="calendar-day-event-top">
+                      <div>
+                        <strong>{event.title}</strong>
+
+                        {event.startTime || event.endTime ? (
+                          <small>
+                            {event.startTime || "--:--"}
+                            {event.endTime ? ` – ${event.endTime}` : ""}
+                          </small>
+                        ) : null}
+                      </div>
+
+                      <span>{getTagLabel(event.tag)}</span>
+                    </div>
+
+                    {event.subtitle ? <p>{event.subtitle}</p> : null}
+                    {event.description ? <p>{event.description}</p> : null}
+
+                    <div className="calendar-day-event-actions">
+                      {event.kind === "project" ? (
+                        <button type="button" onClick={() => onEditProject(event.project)}>
+                          Editar projeto
+                        </button>
+                      ) : (
+                        <>
+                          <button type="button" onClick={() => onEditCalendarEvent(event)}>
+                            Editar
+                          </button>
+
+                          <button
+                            type="button"
+                            className="danger"
+                            onClick={() => onDeleteCalendarEvent(event.id)}
+                          >
+                            Excluir
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <div className="calendar-empty-day">
+              Nenhum compromisso para as tags selecionadas neste dia.
+            </div>
+          )}
+        </div>
+      </section>
     </section>
   );
 }
@@ -1047,9 +1062,11 @@ export default function App() {
   const [statusFilter, setStatusFilter] = useState("Todos");
   const [search, setSearch] = useState("");
 
-  const [activeCalendarTags, setActiveCalendarTags] = useState(["Projeto"]);
+  const [activeCalendarTags, setActiveCalendarTags] = useState(CALENDAR_TAGS.map((tag) => tag.id));
   const [selectedCalendarDate, setSelectedCalendarDate] = useState(todayISO());
-  const [isDayModalOpen, setIsDayModalOpen] = useState(false);
+
+  const [isCreateChoiceOpen, setIsCreateChoiceOpen] = useState(false);
+  const [calendarEventForm, setCalendarEventForm] = useState(null);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(projects));
@@ -1142,6 +1159,7 @@ export default function App() {
       receivedDate: project.receivedDate || "",
       status: project.status || "A receber",
       note: project.note || "",
+      color: project.color || EVENT_COLORS[0],
     });
     setIsFormOpen(true);
   }
@@ -1201,6 +1219,7 @@ export default function App() {
       receivedDate,
       status,
       note: form.note.trim(),
+      color: form.color || EVENT_COLORS[0],
       updatedAt: new Date().toISOString(),
     };
 
@@ -1238,10 +1257,64 @@ export default function App() {
     );
   }
 
-  function createCalendarEvent(payload) {
-    setCalendarEvents((current) => [payload, ...current]);
+  function openCreateChoice(date) {
+    setSelectedCalendarDate(date);
+    setIsCreateChoiceOpen(true);
+  }
+
+  function chooseProjectFromCalendar() {
+    setIsCreateChoiceOpen(false);
+    openNewProject(selectedCalendarDate);
+  }
+
+  function chooseCalendarEvent(tag) {
+    setIsCreateChoiceOpen(false);
+    setCalendarEventForm(emptyCalendarEvent(selectedCalendarDate, tag));
+  }
+
+  function editCalendarEvent(event) {
+    setCalendarEventForm({
+      id: event.id,
+      title: event.title || "",
+      date: event.date || selectedCalendarDate,
+      tag: event.tag || "Compromissos",
+      startTime: event.startTime || "",
+      endTime: event.endTime || "",
+      color: event.color || EVENT_COLORS[1],
+      description: event.description || "",
+    });
+  }
+
+  function saveCalendarEvent(event) {
+    event.preventDefault();
+
+    if (!calendarEventForm.title.trim()) {
+      window.alert("Informe o título.");
+      return;
+    }
+
+    const payload = {
+      ...calendarEventForm,
+      id: calendarEventForm.id || createId(),
+      kind: "manual",
+      title: calendarEventForm.title.trim(),
+      description: calendarEventForm.description.trim(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    setCalendarEvents((current) => {
+      const exists = current.some((item) => item.id === payload.id);
+
+      if (exists) {
+        return current.map((item) => (item.id === payload.id ? payload : item));
+      }
+
+      return [payload, ...current];
+    });
+
     setSelectedCalendarDate(payload.date);
     setSelectedMonth(payload.date.slice(0, 7));
+    setCalendarEventForm(null);
   }
 
   function deleteCalendarEvent(id) {
@@ -1522,11 +1595,10 @@ export default function App() {
             setActiveCalendarTags={setActiveCalendarTags}
             selectedCalendarDate={selectedCalendarDate}
             setSelectedCalendarDate={setSelectedCalendarDate}
-            isDayModalOpen={isDayModalOpen}
-            setIsDayModalOpen={setIsDayModalOpen}
-            onCreateCalendarEvent={createCalendarEvent}
-            onDeleteCalendarEvent={deleteCalendarEvent}
+            onOpenCreateChoice={openCreateChoice}
             onEditProject={openEditProject}
+            onEditCalendarEvent={editCalendarEvent}
+            onDeleteCalendarEvent={deleteCalendarEvent}
           />
         ) : null}
       </section>
@@ -1538,6 +1610,24 @@ export default function App() {
           editingId={editingId}
           onClose={closeForm}
           onSubmit={saveProject}
+        />
+      ) : null}
+
+      {isCreateChoiceOpen ? (
+        <CalendarCreateTypeModal
+          date={selectedCalendarDate}
+          onClose={() => setIsCreateChoiceOpen(false)}
+          onChooseProject={chooseProjectFromCalendar}
+          onChooseEvent={chooseCalendarEvent}
+        />
+      ) : null}
+
+      {calendarEventForm ? (
+        <CalendarEventFormModal
+          eventForm={calendarEventForm}
+          setEventForm={setCalendarEventForm}
+          onClose={() => setCalendarEventForm(null)}
+          onSubmit={saveCalendarEvent}
         />
       ) : null}
     </main>
