@@ -977,6 +977,19 @@ function CalendarPage({
     setMonth(nextDateISO.slice(0, 7));
   }
 
+  function goToToday() {
+    const today = todayISO();
+    setSelectedCalendarDate(today);
+    setMonth(today.slice(0, 7));
+
+    window.setTimeout(() => {
+      detailRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }, 80);
+  }
+
   function toggleTag(tagId) {
     setActiveCalendarTags((current) => {
       if (current.includes(tagId)) {
@@ -1048,6 +1061,10 @@ function CalendarPage({
           onClick={() => (calendarView === "semana" ? changeWeek(-1) : changeMonth(-1))}
         >
           ← {calendarView === "semana" ? "Semana" : previousMonthLabel}
+        </button>
+
+        <button type="button" onClick={goToToday}>
+          Hoje
         </button>
 
         <button
