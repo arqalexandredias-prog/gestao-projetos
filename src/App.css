@@ -2355,4 +2355,36 @@ td {
   .full-calendar-card {
     margin-top: 4px !important;
   }
+}/* Remove Novo projeto/Cadastrar da aba Calendário */
+.calendar-page .calendar-page-actions .primary-button,
+.calendar-page .calendar-side-header button {
+  display: none !important;
+}
+
+@media (max-width: 620px) {
+  .calendar-page-header h1 {
+    padding-right: 0 !important;
+  }
+
+  .calendar-page-actions {
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    width: 100% !important;
+    margin-top: 10px !important;
+  }
+
+  .calendar-page-actions button {
+    flex: 1 1 0 !important;
+    min-width: 0 !important;
+    height: 32px !important;
+    padding: 0 5px !important;
+    border-radius: 999px !important;
+    font-size: 0.58rem !important;
+    white-space: nowrap !important;
+  }
+
+  .calendar-side-header {
+    display: block !important;
+  }
 }
