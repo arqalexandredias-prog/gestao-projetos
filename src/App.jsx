@@ -329,6 +329,8 @@ function normalizeProjectCodes(projects) {
     const scheduleProgress = getScheduleProgress(schedule);
     const budgets = normalizeProjectBudgets(project.budgets);
     const budgetSummary = getBudgetSummary(budgets);
+    const diaryEntries = normalizeProjectDiaryEntries(project.diaryEntries || project.diary);
+    const diarySummary = getDiarySummary(diaryEntries);
 
     return {
       ...project,
@@ -344,6 +346,10 @@ function normalizeProjectCodes(projects) {
       budgetsTotal: budgetSummary.totalItems,
       budgetsApprovedTotal: budgetSummary.approvedTotal,
       budgetsGrandTotal: budgetSummary.grandTotal,
+      diaryEntries,
+      diaryTotal: diarySummary.totalItems,
+      diaryPinnedTotal: diarySummary.pinnedCount,
+      diaryLastDate: diarySummary.lastDate,
       createdAt: project.createdAt || project.updatedAt || project.date || "",
       projectCode:
         codeById.get(project.id) ||
@@ -884,6 +890,98 @@ function withProjectBudgets(project, budgets) {
   };
 }
 
+const DIARY_TYPE_OPTIONS = ["Registro", "Reunião", "Decisão", "Pendência", "Ideia", "Entrega"];
+
+function emptyDiaryForm() {
+  return {
+    title: "",
+    date: todayISO(),
+    type: "Registro",
+    text: "",
+    nextStep: "",
+  };
+}
+
+function normalizeDiaryType(type) {
+  return DIARY_TYPE_OPTIONS.includes(type) ? type : "Registro";
+}
+
+function normalizeProjectDiaryEntries(entries) {
+  if (!Array.isArray(entries)) return [];
+
+  return entries
+    .map((entry, index) => ({
+      id: entry.id || createId(),
+      title: String(entry.title || "").trim(),
+      date: isValidDateString(entry.date) ? entry.date : todayISO(),
+      type: normalizeDiaryType(entry.type),
+      text: String(entry.text || entry.description || "").trim(),
+      nextStep: String(entry.nextStep || "").trim(),
+      pinned: Boolean(entry.pinned),
+      position: Number.isFinite(Number(entry.position)) ? Number(entry.position) : index + 1,
+      createdAt: entry.createdAt || new Date().toISOString(),
+      updatedAt: entry.updatedAt || entry.createdAt || new Date().toISOString(),
+    }))
+    .filter((entry) => entry.title || entry.text || entry.nextStep)
+    .sort((a, b) => {
+      if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
+      if (a.date && b.date && a.date !== b.date) return b.date.localeCompare(a.date);
+      if (a.position !== b.position) return a.position - b.position;
+
+      return String(b.createdAt || "").localeCompare(String(a.createdAt || ""));
+    });
+}
+
+function getProjectDiary(project) {
+  return normalizeProjectDiaryEntries(project?.diaryEntries || project?.diary);
+}
+
+function getDiarySummary(entries) {
+  const normalizedEntries = normalizeProjectDiaryEntries(entries);
+
+  return {
+    totalItems: normalizedEntries.length,
+    pinnedCount: normalizedEntries.filter((entry) => entry.pinned).length,
+    lastDate: normalizedEntries[0]?.date || "",
+  };
+}
+
+function getProjectDiaryLabel(project) {
+  const entries = getProjectDiary(project);
+  const summary = getDiarySummary(entries);
+
+  if (summary.totalItems > 0) {
+    return `${summary.totalItems} registro${summary.totalItems > 1 ? "s" : ""}`;
+  }
+
+  if (project?.note) return "1 observação";
+
+  return "Criar diário";
+}
+
+function getDiaryTypeClass(type) {
+  if (type === "Entrega") return "status-recebido";
+  if (type === "Pendência") return "status-cancelado";
+  if (type === "Decisão") return "status-parcial";
+  if (type === "Reunião") return "status-a-receber";
+
+  return "status-orcamento";
+}
+
+function withProjectDiary(project, entries) {
+  const normalizedEntries = normalizeProjectDiaryEntries(entries);
+  const summary = getDiarySummary(normalizedEntries);
+
+  return {
+    ...project,
+    diaryEntries: normalizedEntries,
+    diaryTotal: summary.totalItems,
+    diaryPinnedTotal: summary.pinnedCount,
+    diaryLastDate: summary.lastDate,
+    updatedAt: new Date().toISOString(),
+  };
+}
+
 function loadProjects() {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
@@ -1157,12 +1255,16 @@ function ProjectSectionModal({
   onAddBudget,
   onUpdateBudgetStatus,
   onDeleteBudget,
+  onAddDiaryEntry,
+  onToggleDiaryPin,
+  onDeleteDiaryEntry,
 }) {
   const [paymentForm, setPaymentForm] = useState(emptyPaymentForm);
   const [taskForm, setTaskForm] = useState(emptyTaskForm);
   const [scheduleForm, setScheduleForm] = useState(emptyScheduleForm);
   const [fileForm, setFileForm] = useState(emptyProjectFileForm);
   const [budgetForm, setBudgetForm] = useState(emptyBudgetForm);
+  const [diaryForm, setDiaryForm] = useState(emptyDiaryForm);
 
   const title = getProjectTitle(project);
   const client = getProjectClient(project);
@@ -1181,6 +1283,8 @@ function ProjectSectionModal({
   const favoriteFilesCount = files.filter((file) => file.favorite).length;
   const budgets = getProjectBudgets(project);
   const budgetSummary = getBudgetSummary(budgets);
+  const diaryEntries = getProjectDiary(project);
+  const diarySummary = getDiarySummary(diaryEntries);
 
   const titles = {
     pagamentos: "Pagamentos",
@@ -1242,6 +1346,16 @@ function ProjectSectionModal({
 
     if (saved) {
       setBudgetForm(emptyBudgetForm());
+    }
+  }
+
+  function submitDiary(event) {
+    event.preventDefault();
+
+    const saved = onAddDiaryEntry(project.id, diaryForm);
+
+    if (saved) {
+      setDiaryForm(emptyDiaryForm());
     }
   }
 
@@ -1729,10 +1843,164 @@ function ProjectSectionModal({
 
         {type === "diario" ? (
           <div className="project-section-popup-body">
+            <div className="project-section-info-list">
+              <div>
+                <span>Registros</span>
+                <strong>{diarySummary.totalItems}</strong>
+              </div>
+
+              <div>
+                <span>Fixados</span>
+                <strong>{diarySummary.pinnedCount}</strong>
+              </div>
+
+              <div>
+                <span>Último registro</span>
+                <strong>{diarySummary.lastDate ? formatDate(diarySummary.lastDate) : "Sem data"}</strong>
+              </div>
+
+              <div>
+                <span>Observação principal</span>
+                <strong>{project.note ? "Existe" : "Vazia"}</strong>
+              </div>
+            </div>
+
             {project.note ? (
-              <p className="project-section-text">{project.note}</p>
-            ) : (
+              <div className="project-section-text">
+                <strong>Observação do cadastro</strong>
+                <p>{project.note}</p>
+              </div>
+            ) : null}
+
+            <p className="project-payment-empty">
+              Use o diário para registrar decisões, combinados, pendências, reuniões e próximos passos
+              sem misturar tudo nas observações gerais do projeto.
+            </p>
+
+            <form className="project-payment-form" onSubmit={submitDiary}>
+              <label className="project-payment-form-wide">
+                Título do registro
+                <input
+                  type="text"
+                  value={diaryForm.title}
+                  placeholder="Ex: Cliente aprovou layout da cozinha"
+                  onChange={(event) =>
+                    setDiaryForm((prev) => ({
+                      ...prev,
+                      title: event.target.value,
+                    }))
+                  }
+                />
+              </label>
+
+              <label>
+                Data
+                <input
+                  type="date"
+                  value={diaryForm.date}
+                  onChange={(event) =>
+                    setDiaryForm((prev) => ({
+                      ...prev,
+                      date: event.target.value,
+                    }))
+                  }
+                />
+              </label>
+
+              <label>
+                Tipo
+                <select
+                  value={diaryForm.type}
+                  onChange={(event) =>
+                    setDiaryForm((prev) => ({
+                      ...prev,
+                      type: event.target.value,
+                    }))
+                  }
+                >
+                  {DIARY_TYPE_OPTIONS.map((typeOption) => (
+                    <option key={typeOption} value={typeOption}>
+                      {typeOption}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="project-payment-form-wide">
+                Registro
+                <textarea
+                  rows="4"
+                  value={diaryForm.text}
+                  placeholder="Escreva o que aconteceu, o que foi decidido ou o que precisa lembrar..."
+                  onChange={(event) =>
+                    setDiaryForm((prev) => ({
+                      ...prev,
+                      text: event.target.value,
+                    }))
+                  }
+                />
+              </label>
+
+              <label className="project-payment-form-wide">
+                Próximo passo
+                <input
+                  type="text"
+                  value={diaryForm.nextStep}
+                  placeholder="Ex: enviar revisão até sexta-feira"
+                  onChange={(event) =>
+                    setDiaryForm((prev) => ({
+                      ...prev,
+                      nextStep: event.target.value,
+                    }))
+                  }
+                />
+              </label>
+
+              <button type="submit">Salvar registro</button>
+            </form>
+
+            {!diaryEntries.length ? (
               <div className="project-section-empty">Nenhum registro no diário ainda.</div>
+            ) : (
+              <div className="project-payment-list">
+                {diaryEntries.map((entry) => (
+                  <article key={entry.id} className="project-payment-item">
+                    <div>
+                      <strong>{entry.pinned ? "★ " : ""}{entry.title || entry.type}</strong>
+
+                      <span>{formatDate(entry.date)}</span>
+
+                      <small>
+                        <span className={`status ${getDiaryTypeClass(entry.type)}`}>
+                          {entry.type}
+                        </span>
+                      </small>
+
+                      {entry.text ? <small>{entry.text}</small> : null}
+
+                      {entry.nextStep ? (
+                        <small>
+                          <b>Próximo passo:</b> {entry.nextStep}
+                        </small>
+                      ) : null}
+                    </div>
+
+                    <div className="row-actions">
+                      <button type="button" onClick={() => onToggleDiaryPin(project.id, entry.id)}>
+                        {entry.pinned ? "Desfixar" : "Fixar"}
+                      </button>
+
+                      <button
+                        type="button"
+                        className="danger"
+                        onClick={() => onDeleteDiaryEntry(project.id, entry.id)}
+                      >
+                        Excluir
+                      </button>
+                    </div>
+                  </article>
+                ))}
+              </div>
             )}
           </div>
         ) : null}
@@ -2023,6 +2291,9 @@ function ProjectDetailModal({
   onAddBudget,
   onUpdateBudgetStatus,
   onDeleteBudget,
+  onAddDiaryEntry,
+  onToggleDiaryPin,
+  onDeleteDiaryEntry,
 }) {
   const [hideValues, setHideValues] = useState(false);
   const [activeSection, setActiveSection] = useState(null);
@@ -2042,6 +2313,7 @@ function ProjectDetailModal({
   const taskProgress = getTaskProgress(getProjectTasks(project));
   const scheduleProgress = getScheduleProgress(getProjectSchedule(project));
   const budgetSummary = getBudgetSummary(getProjectBudgets(project));
+  const diarySummary = getDiarySummary(getProjectDiary(project));
 
   function money(value) {
     return hideValues ? "••••••" : formatCurrency(value);
@@ -2214,7 +2486,7 @@ function ProjectDetailModal({
             <button type="button" onClick={() => setActiveSection("diario")}>
               <span>✍</span>
               <strong>Diário</strong>
-              <small>{project.note ? "1 registro" : "Sem registros"}</small>
+              <small>{diarySummary.totalItems ? getProjectDiaryLabel(project) : project.note ? "1 observação" : "Criar diário"}</small>
             </button>
           </div>
         </div>
@@ -2248,6 +2520,9 @@ function ProjectDetailModal({
             onAddBudget={onAddBudget}
             onUpdateBudgetStatus={onUpdateBudgetStatus}
             onDeleteBudget={onDeleteBudget}
+            onAddDiaryEntry={onAddDiaryEntry}
+            onToggleDiaryPin={onToggleDiaryPin}
+            onDeleteDiaryEntry={onDeleteDiaryEntry}
           />
         ) : null}
       </section>
@@ -3348,6 +3623,10 @@ export default function App() {
       budgetsTotal: getProjectBudgets(existingProject).length,
       budgetsApprovedTotal: getBudgetSummary(getProjectBudgets(existingProject)).approvedTotal,
       budgetsGrandTotal: getBudgetSummary(getProjectBudgets(existingProject)).grandTotal,
+      diaryEntries: getProjectDiary(existingProject),
+      diaryTotal: getProjectDiary(existingProject).length,
+      diaryPinnedTotal: getDiarySummary(getProjectDiary(existingProject)).pinnedCount,
+      diaryLastDate: getDiarySummary(getProjectDiary(existingProject)).lastDate,
       createdAt: existingProject?.createdAt || existingProject?.updatedAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -3840,6 +4119,82 @@ export default function App() {
     );
   }
 
+  function addProjectDiaryEntry(projectId, diaryFormPayload) {
+    const title = String(diaryFormPayload.title || "").trim();
+    const text = String(diaryFormPayload.text || "").trim();
+    const nextStep = String(diaryFormPayload.nextStep || "").trim();
+
+    if (!title && !text && !nextStep) {
+      window.alert("Informe um título, registro ou próximo passo.");
+      return false;
+    }
+
+    setProjects((current) =>
+      normalizeProjectCodes(
+        current.map((project) => {
+          if (project.id !== projectId) return project;
+
+          const currentEntries = getProjectDiary(project);
+          const newEntry = {
+            id: createId(),
+            title: title || normalizeDiaryType(diaryFormPayload.type),
+            date: isValidDateString(diaryFormPayload.date) ? diaryFormPayload.date : todayISO(),
+            type: normalizeDiaryType(diaryFormPayload.type),
+            text,
+            nextStep,
+            pinned: false,
+            position: currentEntries.length + 1,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+
+          return withProjectDiary(project, [...currentEntries, newEntry]);
+        })
+      )
+    );
+
+    return true;
+  }
+
+  function toggleProjectDiaryPin(projectId, diaryEntryId) {
+    setProjects((current) =>
+      normalizeProjectCodes(
+        current.map((project) => {
+          if (project.id !== projectId) return project;
+
+          const nextEntries = getProjectDiary(project).map((entry) =>
+            entry.id === diaryEntryId
+              ? {
+                  ...entry,
+                  pinned: !entry.pinned,
+                  updatedAt: new Date().toISOString(),
+                }
+              : entry
+          );
+
+          return withProjectDiary(project, nextEntries);
+        })
+      )
+    );
+  }
+
+  function deleteProjectDiaryEntry(projectId, diaryEntryId) {
+    const confirmDelete = window.confirm("Excluir este registro do diário?");
+    if (!confirmDelete) return;
+
+    setProjects((current) =>
+      normalizeProjectCodes(
+        current.map((project) => {
+          if (project.id !== projectId) return project;
+
+          const nextEntries = getProjectDiary(project).filter((entry) => entry.id !== diaryEntryId);
+
+          return withProjectDiary(project, nextEntries);
+        })
+      )
+    );
+  }
+
   function openProjectDetails(project, code) {
     setProjectDetails({ project, code });
   }
@@ -4247,6 +4602,9 @@ export default function App() {
           onAddBudget={addProjectBudget}
           onUpdateBudgetStatus={updateProjectBudgetStatus}
           onDeleteBudget={deleteProjectBudget}
+          onAddDiaryEntry={addProjectDiaryEntry}
+          onToggleDiaryPin={toggleProjectDiaryPin}
+          onDeleteDiaryEntry={deleteProjectDiaryEntry}
         />
       ) : null}
     </main>
