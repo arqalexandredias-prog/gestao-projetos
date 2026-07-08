@@ -277,20 +277,79 @@ function getProjectClient(project) {
   return project.client || "Cliente sem nome";
 }
 
+function formatProjectCode(number) {
+  return `P-${String(number).padStart(3, "0")}`;
+}
+
 function getProjectCode(index) {
-  return `P-${String(index + 1).padStart(3, "0")}`;
+  return formatProjectCode(index + 1);
+}
+
+function normalizeProjectCode(value) {
+  const raw = String(value || "").trim().toUpperCase();
+  const match = raw.match(/^P-?(\d+)$/i);
+
+  if (!match) return raw;
+  return formatProjectCode(Number(match[1]));
+}
+
+function getProjectCodeNumber(value) {
+  const match = String(value || "").match(/^P-(\d+)$/i);
+  return match ? Number(match[1]) : 0;
+}
+
+function normalizeProjectCodes(projects) {
+  const used = new Set();
+  let nextNumber = 1;
+
+  return projects.map((project) => {
+    const normalizedCode = normalizeProjectCode(project.projectCode);
+    let code = normalizedCode;
+
+    if (!code || used.has(code)) {
+      while (used.has(formatProjectCode(nextNumber))) {
+        nextNumber += 1;
+      }
+
+      code = formatProjectCode(nextNumber);
+    }
+
+    used.add(code);
+
+    const codeNumber = getProjectCodeNumber(code);
+    if (codeNumber >= nextNumber) {
+      nextNumber = codeNumber + 1;
+    }
+
+    return {
+      ...project,
+      projectCode: code,
+    };
+  });
 }
 
 function getNextProjectCode(projects) {
-  const maxNumber = projects.reduce((max, project, index) => {
-    const code = project.projectCode || getProjectCode(index);
-    const match = String(code).match(/P-(\d+)/i);
-    const number = match ? Number(match[1]) : 0;
-
-    return Math.max(max, number);
+  const normalizedProjects = normalizeProjectCodes(projects);
+  const maxNumber = normalizedProjects.reduce((max, project) => {
+    return Math.max(max, getProjectCodeNumber(project.projectCode));
   }, 0);
 
-  return `P-${String(maxNumber + 1).padStart(3, "0")}`;
+  return formatProjectCode(maxNumber + 1);
+}
+
+function getUniqueProjectCode(projects, requestedCode, editingId) {
+  const normalizedRequested = normalizeProjectCode(requestedCode);
+  const fallbackCode = getNextProjectCode(projects);
+  const code = normalizedRequested || fallbackCode;
+
+  const alreadyExists = projects.some((project) => {
+    if (project.id === editingId) return false;
+    return normalizeProjectCode(project.projectCode) === code;
+  });
+
+  if (!alreadyExists) return code;
+
+  return fallbackCode;
 }
 
 function getProjectDeadline(project) {
@@ -368,7 +427,8 @@ function emptyCalendarEvent(date = todayISO(), tag = "Compromissos") {
 function loadProjects() {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
-    return saved ? JSON.parse(saved) : [];
+    const parsed = saved ? JSON.parse(saved) : [];
+    return normalizeProjectCodes(Array.isArray(parsed) ? parsed : []);
   } catch {
     return [];
   }
@@ -590,7 +650,6 @@ function ProjectMobileList({ projects, emptyMessage, onOpenDetails }) {
 
       {projects.map((project, index) => {
         const code = project.projectCode || getProjectCode(index);
-        const status = getDisplayStatus(project);
 
         return (
           <button
@@ -606,7 +665,10 @@ function ProjectMobileList({ projects, emptyMessage, onOpenDetails }) {
               <small>{getProjectClient(project)}</small>
             </span>
 
-            <span className={`projects-premium-status status-dot-${getStatusClass(status)}`} />
+            <span
+              className="projects-premium-status"
+              style={{ backgroundColor: project.color || EVENT_COLORS[0] }}
+            />
           </button>
         );
       })}
@@ -1325,7 +1387,7 @@ function CalendarPage({
         subtitle: client,
         description: `Prazo de entrega do projeto ${title}.`,
         date: deadline,
-        color: EVENT_COLORS[4],
+        color: project.color || EVENT_COLORS[4],
         project,
       };
 
@@ -1836,7 +1898,7 @@ export default function App() {
 
     const payload = {
       id: editingId || createId(),
-      projectCode: form.projectCode.trim() || getNextProjectCode(projects),
+      projectCode: getUniqueProjectCode(projects, form.projectCode, editingId),
       date: form.date,
       deliveryDate: form.deliveryDate,
       development: form.development.trim(),
@@ -1856,9 +1918,11 @@ export default function App() {
     };
 
     if (editingId) {
-      setProjects((current) => current.map((item) => (item.id === editingId ? payload : item)));
+      setProjects((current) =>
+        normalizeProjectCodes(current.map((item) => (item.id === editingId ? payload : item)))
+      );
     } else {
-      setProjects((current) => [payload, ...current]);
+      setProjects((current) => normalizeProjectCodes([payload, ...current]));
     }
 
     setSelectedCalendarDate(payload.deliveryDate || payload.date);
@@ -1871,22 +1935,24 @@ export default function App() {
     const confirmDelete = window.confirm("Tem certeza que deseja excluir este projeto?");
     if (!confirmDelete) return;
 
-    setProjects((current) => current.filter((project) => project.id !== id));
+    setProjects((current) => normalizeProjectCodes(current.filter((project) => project.id !== id)));
     setProjectDetails(null);
   }
 
   function markAsReceived(id) {
     setProjects((current) =>
-      current.map((project) =>
-        project.id === id
-          ? {
-              ...project,
-              status: "Recebido",
-              receivedAmount: getCommission(project),
-              receivedDate: project.receivedDate || todayISO(),
-              updatedAt: new Date().toISOString(),
-            }
-          : project
+      normalizeProjectCodes(
+        current.map((project) =>
+          project.id === id
+            ? {
+                ...project,
+                status: "Recebido",
+                receivedAmount: getCommission(project),
+                receivedDate: project.receivedDate || todayISO(),
+                updatedAt: new Date().toISOString(),
+              }
+            : project
+        )
       )
     );
   }
