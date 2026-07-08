@@ -1,8 +1,21 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  GoogleAuthProvider,
+  createUserWithEmailAndPassword,
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  signInWithPopup,
+  signOut,
+} from "firebase/auth";
+import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
 import "./App.css";
+import { auth, db } from "./services/firebase";
 
 const STORAGE_KEY = "alexandre-dias-gestao-projetos-v1";
 const PROJECT_CODE_ORDER_RULE = "CODIGOS_POR_DATA_DO_PROJETO_V1";
+const CLOUD_DATA_VERSION = "FIREBASE_SYNC_V1";
+const CLOUD_APP_DOC_ID = "main";
+const googleProvider = new GoogleAuthProvider();
 const PAGE_STORAGE_KEY = "alexandre-dias-gestao-projetos-pagina-atual";
 const CALENDAR_EVENTS_STORAGE_KEY = "alexandre-dias-gestao-projetos-eventos-calendario-v2";
 const CALENDAR_VIEW_STORAGE_KEY = "alexandre-dias-gestao-projetos-calendario-view";
@@ -1020,6 +1033,33 @@ function loadCalendarEvents() {
     return [];
   }
 }
+
+function getUserAppDocRef(userId) {
+  return doc(db, "users", userId, "appData", CLOUD_APP_DOC_ID);
+}
+
+function getCloudPayload({
+  projects,
+  calendarEvents,
+  activeCalendarTags,
+  selectedCalendarDate,
+  calendarView,
+  activePage,
+}) {
+  return {
+    version: CLOUD_DATA_VERSION,
+    projects: normalizeProjectCodes(projects),
+    calendarEvents: Array.isArray(calendarEvents) ? calendarEvents : [],
+    preferences: {
+      activeCalendarTags,
+      selectedCalendarDate,
+      calendarView,
+      activePage,
+    },
+    updatedAt: serverTimestamp(),
+  };
+}
+
 
 function getStatusClass(status) {
   const map = {
@@ -3144,6 +3184,308 @@ function ProjectListItem({ project, onEdit }) {
   );
 }
 
+
+function getFriendlyAuthError(firebaseError) {
+  const code = firebaseError?.code || "";
+  const message = firebaseError?.message || "";
+
+  if (code.includes("auth/email-already-in-use")) {
+    return "Este e-mail já tem uma conta. Clique em Já tenho conta e entre com a senha.";
+  }
+
+  if (code.includes("auth/invalid-email")) {
+    return "O e-mail está inválido. Confira se termina com .com e se não tem espaço.";
+  }
+
+  if (code.includes("auth/weak-password")) {
+    return "A senha está fraca. Use pelo menos 8 caracteres, misturando letras e números.";
+  }
+
+  if (code.includes("auth/operation-not-allowed")) {
+    return "Esse método de login ainda não está ativo no Firebase.";
+  }
+
+  if (code.includes("auth/invalid-credential")) {
+    return "E-mail ou senha incorretos. Se a conta ainda não existe, clique em Criar primeiro acesso.";
+  }
+
+  if (code.includes("auth/popup-closed-by-user")) {
+    return "A janela do Google foi fechada antes de concluir o login.";
+  }
+
+  if (code.includes("auth/unauthorized-domain")) {
+    return "O domínio localhost ou Vercel não está autorizado no Firebase Authentication.";
+  }
+
+  if (code.includes("auth/network-request-failed")) {
+    return "Falha de conexão. Verifique a internet e tente novamente.";
+  }
+
+  return `Erro do Firebase: ${code || message || "erro desconhecido"}`;
+}
+
+function AuthScreen() {
+  const [mode, setMode] = useState("login");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  const isCreateMode = mode === "create";
+
+  async function handleSubmit(event) {
+    event.preventDefault();
+
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanPassword = password.trim();
+
+    if (!cleanEmail || !cleanPassword) {
+      setError("Informe e-mail e senha.");
+      return;
+    }
+
+    if (!cleanEmail.includes("@") || !cleanEmail.includes(".")) {
+      setError("O e-mail parece incompleto. Confira se está escrito inteiro, tipo nome@gmail.com.");
+      return;
+    }
+
+    if (cleanPassword.length < 8) {
+      setError("Use uma senha com pelo menos 8 caracteres.");
+      return;
+    }
+
+    setBusy(true);
+    setError("");
+
+    try {
+      if (isCreateMode) {
+        await createUserWithEmailAndPassword(auth, cleanEmail, cleanPassword);
+      } else {
+        await signInWithEmailAndPassword(auth, cleanEmail, cleanPassword);
+      }
+    } catch (firebaseError) {
+      console.error("Firebase Auth Error:", firebaseError);
+      setError(getFriendlyAuthError(firebaseError));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleGoogleLogin() {
+    setBusy(true);
+    setError("");
+
+    try {
+      await signInWithPopup(auth, googleProvider);
+    } catch (firebaseError) {
+      console.error("Firebase Google Auth Error:", firebaseError);
+      setError(getFriendlyAuthError(firebaseError));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <main
+      className="app"
+      style={{
+        minHeight: "100vh",
+        display: "grid",
+        placeItems: "center",
+        padding: 24,
+      }}
+    >
+      <section
+        style={{
+          width: "min(440px, 100%)",
+          borderRadius: 32,
+          padding: 26,
+          border: "1px solid rgba(45, 29, 23, 0.10)",
+          background:
+            "linear-gradient(180deg, rgba(255, 252, 246, 0.94), rgba(250, 245, 237, 0.86))",
+          boxShadow: "0 24px 60px rgba(45, 29, 23, 0.12)",
+        }}
+      >
+        <div style={{ marginBottom: 24 }}>
+          <BrandLogo compact />
+
+          <p
+            style={{
+              margin: "22px 0 0",
+              color: "#9a7768",
+              fontSize: "0.68rem",
+              fontWeight: 900,
+              letterSpacing: "0.18em",
+              textTransform: "uppercase",
+            }}
+          >
+            {isCreateMode ? "Criar acesso" : "Entrar no app"}
+          </p>
+
+          <h1
+            style={{
+              margin: "8px 0 0",
+              fontSize: "clamp(1.8rem, 9vw, 2.8rem)",
+              lineHeight: 0.95,
+              letterSpacing: "-0.07em",
+              color: "#241915",
+            }}
+          >
+            Gestão de projetos
+          </h1>
+
+          <p
+            style={{
+              margin: "12px 0 0",
+              color: "#806052",
+              lineHeight: 1.45,
+              fontSize: "0.92rem",
+            }}
+          >
+            Seus projetos, tarefas, cronograma, arquivos e financeiro salvos na nuvem.
+          </p>
+        </div>
+
+        <form onSubmit={handleSubmit} style={{ display: "grid", gap: 12 }}>
+          <label style={{ display: "grid", gap: 7, color: "#6f5145", fontWeight: 800 }}>
+            E-mail
+            <input
+              type="email"
+              value={email}
+              autoComplete="email"
+              placeholder="seu@email.com"
+              onChange={(event) => setEmail(event.target.value)}
+              style={{
+                minHeight: 48,
+                borderRadius: 16,
+                border: "1px solid rgba(45, 29, 23, 0.13)",
+                background: "rgba(255,255,255,0.72)",
+                padding: "0 14px",
+                font: "inherit",
+              }}
+            />
+          </label>
+
+          <label style={{ display: "grid", gap: 7, color: "#6f5145", fontWeight: 800 }}>
+            Senha
+            <input
+              type="password"
+              value={password}
+              autoComplete={isCreateMode ? "new-password" : "current-password"}
+              placeholder="mínimo 8 caracteres"
+              onChange={(event) => setPassword(event.target.value)}
+              style={{
+                minHeight: 48,
+                borderRadius: 16,
+                border: "1px solid rgba(45, 29, 23, 0.13)",
+                background: "rgba(255,255,255,0.72)",
+                padding: "0 14px",
+                font: "inherit",
+              }}
+            />
+          </label>
+
+          {error ? (
+            <div
+              style={{
+                padding: "10px 12px",
+                borderRadius: 14,
+                background: "rgba(150, 40, 40, 0.10)",
+                color: "#8b2f2f",
+                fontWeight: 800,
+                lineHeight: 1.35,
+                fontSize: "0.82rem",
+              }}
+            >
+              {error}
+            </div>
+          ) : null}
+
+          <button
+            type="submit"
+            className="primary-button"
+            disabled={busy}
+            style={{
+              minHeight: 48,
+              marginTop: 4,
+              borderRadius: 18,
+            }}
+          >
+            {busy ? "Aguarde..." : isCreateMode ? "Criar minha conta" : "Entrar"}
+          </button>
+
+          <button
+            type="button"
+            onClick={handleGoogleLogin}
+            disabled={busy}
+            style={{
+              minHeight: 44,
+              borderRadius: 16,
+              border: "1px solid rgba(45, 29, 23, 0.10)",
+              background: "rgba(255, 252, 246, 0.82)",
+              color: "#2d1d17",
+              fontWeight: 900,
+              cursor: "pointer",
+            }}
+          >
+            Entrar com Google
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setMode(isCreateMode ? "login" : "create");
+              setError("");
+            }}
+            style={{
+              minHeight: 42,
+              borderRadius: 16,
+              border: "1px solid rgba(45, 29, 23, 0.10)",
+              background: "rgba(255, 252, 246, 0.70)",
+              color: "#7c5d4e",
+              fontWeight: 900,
+              cursor: "pointer",
+            }}
+          >
+            {isCreateMode ? "Já tenho conta" : "Criar primeiro acesso"}
+          </button>
+        </form>
+      </section>
+    </main>
+  );
+}
+
+
+function LoadingScreen({ message = "Carregando..." }) {
+  return (
+    <main
+      className="app"
+      style={{
+        minHeight: "100vh",
+        display: "grid",
+        placeItems: "center",
+        padding: 24,
+      }}
+    >
+      <section
+        style={{
+          width: "min(360px, 100%)",
+          textAlign: "center",
+          borderRadius: 28,
+          padding: 24,
+          border: "1px solid rgba(45, 29, 23, 0.10)",
+          background: "rgba(255, 252, 246, 0.88)",
+          color: "#6f5145",
+          fontWeight: 900,
+        }}
+      >
+        {message}
+      </section>
+    </main>
+  );
+}
+
+
 function CalendarPage({
   month,
   setMonth,
@@ -3870,6 +4212,144 @@ export default function App() {
   const [isCreateChoiceOpen, setIsCreateChoiceOpen] = useState(false);
   const [calendarEventForm, setCalendarEventForm] = useState(null);
   const [projectDetails, setProjectDetails] = useState(null);
+
+  const [currentUser, setCurrentUser] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [cloudLoading, setCloudLoading] = useState(false);
+  const [cloudReady, setCloudReady] = useState(false);
+  const [cloudError, setCloudError] = useState("");
+
+  const cloudSaveTimerRef = useRef(null);
+  const cloudLoadedOnceRef = useRef(false);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      setCurrentUser(firebaseUser || null);
+      setAuthLoading(false);
+
+      if (!firebaseUser) {
+        setCloudReady(false);
+        cloudLoadedOnceRef.current = false;
+      }
+    });
+
+    return unsubscribe;
+  }, []);
+
+  useEffect(() => {
+    if (!currentUser || cloudLoadedOnceRef.current) return;
+
+    async function loadCloudData() {
+      setCloudLoading(true);
+      setCloudError("");
+
+      try {
+        const reference = getUserAppDocRef(currentUser.uid);
+        const snapshot = await getDoc(reference);
+
+        if (snapshot.exists()) {
+          const data = snapshot.data();
+
+          if (Array.isArray(data.projects)) {
+            setProjects(normalizeProjectCodes(data.projects));
+          }
+
+          if (Array.isArray(data.calendarEvents)) {
+            setCalendarEvents(data.calendarEvents);
+          }
+
+          if (data.preferences?.activePage && VALID_PAGES.includes(data.preferences.activePage)) {
+            setActivePage(data.preferences.activePage);
+          }
+
+          if (Array.isArray(data.preferences?.activeCalendarTags)) {
+            const validTagIds = CALENDAR_TAGS.map((tag) => tag.id);
+            const nextTags = data.preferences.activeCalendarTags.filter((tagId) =>
+              validTagIds.includes(tagId)
+            );
+
+            if (nextTags.length) {
+              setActiveCalendarTags(nextTags);
+            }
+          }
+
+          if (data.preferences?.selectedCalendarDate && isValidDateString(data.preferences.selectedCalendarDate)) {
+            setSelectedCalendarDate(data.preferences.selectedCalendarDate);
+            setSelectedMonth(data.preferences.selectedCalendarDate.slice(0, 7));
+          }
+
+          if (["mes", "semana", "dia"].includes(data.preferences?.calendarView)) {
+            setCalendarView(data.preferences.calendarView);
+          }
+        } else {
+          await setDoc(
+            reference,
+            getCloudPayload({
+              projects,
+              calendarEvents,
+              activeCalendarTags,
+              selectedCalendarDate,
+              calendarView,
+              activePage,
+            }),
+            { merge: true }
+          );
+        }
+
+        cloudLoadedOnceRef.current = true;
+        setCloudReady(true);
+      } catch (error) {
+        console.warn("Erro ao carregar dados na nuvem:", error);
+        setCloudError("Não consegui carregar a nuvem. Usando dados locais por enquanto.");
+        cloudLoadedOnceRef.current = true;
+        setCloudReady(true);
+      } finally {
+        setCloudLoading(false);
+      }
+    }
+
+    loadCloudData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser]);
+
+  useEffect(() => {
+    if (!currentUser || !cloudReady) return;
+
+    window.clearTimeout(cloudSaveTimerRef.current);
+
+    cloudSaveTimerRef.current = window.setTimeout(async () => {
+      try {
+        await setDoc(
+          getUserAppDocRef(currentUser.uid),
+          getCloudPayload({
+            projects,
+            calendarEvents,
+            activeCalendarTags,
+            selectedCalendarDate,
+            calendarView,
+            activePage,
+          }),
+          { merge: true }
+        );
+
+        setCloudError("");
+      } catch (error) {
+        console.warn("Erro ao salvar dados na nuvem:", error);
+        setCloudError("Alterações salvas neste aparelho. A nuvem não sincronizou agora.");
+      }
+    }, 650);
+
+    return () => window.clearTimeout(cloudSaveTimerRef.current);
+  }, [
+    projects,
+    calendarEvents,
+    activeCalendarTags,
+    selectedCalendarDate,
+    calendarView,
+    activePage,
+    currentUser,
+    cloudReady,
+  ]);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(projects));
@@ -4879,6 +5359,28 @@ export default function App() {
     setCalendarEvents((current) => current.filter((event) => event.id !== id));
   }
 
+  async function handleSignOut() {
+    const confirmExit = window.confirm("Sair da sua conta?");
+    if (!confirmExit) return;
+
+    await signOut(auth);
+    setProjectDetails(null);
+    setCalendarEventForm(null);
+    setIsCreateChoiceOpen(false);
+  }
+
+  if (authLoading) {
+    return <LoadingScreen message="Abrindo app..." />;
+  }
+
+  if (!currentUser) {
+    return <AuthScreen />;
+  }
+
+  if (cloudLoading) {
+    return <LoadingScreen message="Sincronizando seus projetos..." />;
+  }
+
   return (
     <main className="app">
       <aside className="sidebar">
@@ -4920,7 +5422,7 @@ export default function App() {
 
           <div>
             <strong>Alexandre Dias</strong>
-            <span>Arquitetura & Interiores</span>
+            <span>{currentUser?.email || "Arquitetura & Interiores"}</span>
           </div>
         </div>
       </aside>
@@ -4931,12 +5433,53 @@ export default function App() {
           style={{
             padding: "10px 0 9px",
             marginBottom: 8,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 12,
           }}
         >
           <div className="topbar-brand">
             <BrandLogo compact />
           </div>
+
+          <button
+            type="button"
+            onClick={handleSignOut}
+            title={currentUser?.email || "Sair"}
+            style={{
+              minHeight: 30,
+              borderRadius: 999,
+              border: "1px solid rgba(45, 29, 23, 0.10)",
+              background: "rgba(255, 252, 246, 0.70)",
+              color: "#7c5d4e",
+              padding: "0 10px",
+              fontSize: "0.62rem",
+              fontWeight: 900,
+              cursor: "pointer",
+              whiteSpace: "nowrap",
+            }}
+          >
+            Sair
+          </button>
         </header>
+
+        {cloudError ? (
+          <div
+            style={{
+              marginBottom: 10,
+              padding: "9px 11px",
+              borderRadius: 14,
+              background: "rgba(150, 40, 40, 0.08)",
+              color: "#8b2f2f",
+              fontSize: "0.72rem",
+              fontWeight: 800,
+              lineHeight: 1.35,
+            }}
+          >
+            {cloudError}
+          </div>
+        ) : null}
 
         <div className="mobile-tabs">
           <button
